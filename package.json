@@ -2,7 +2,14 @@
   "name": "shark-ledger",
   "private": true,
   "version": "1.0.0",
+  "description": "轻量、无广告、可离线、可加密云备份的个人记账 PWA",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joshjeoa/shark-ledger.git"
+  },
+  "homepage": "https://joshjeoa.github.io/shark-ledger/",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
