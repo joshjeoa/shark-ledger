@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { Download, Upload, FileDown, Trash2, RotateCcw } from 'lucide-react';
 import { SettingsShell } from './SettingsShell';
 import { useData } from '../../store/data';
@@ -73,28 +73,28 @@ export function DataPage() {
   return (
     <SettingsShell title="数据管理">
       <div className="px-3 pt-3 space-y-3">
-        <div className="bg-white rounded-2xl divide-y divide-gray-50">
+        <div className="bg-card rounded-2xl divide-y divide-line">
           <Btn icon={<FileDown size={18} />} label="导出 CSV（Excel 可打开）" onClick={() => void exportCSV()} />
           <Btn icon={<Download size={18} />} label="导出全量 JSON 备份" onClick={() => void exportJSON()} />
           <Btn icon={<Upload size={18} />} label="导入 JSON 备份" onClick={() => fileRef.current?.click()} />
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)} />
         </div>
 
-        <div className="bg-white rounded-2xl p-4">
+        <div className="bg-card rounded-2xl p-4">
           <h2 className="text-sm font-medium mb-2 flex items-center gap-2">
-            <Trash2 size={16} className="text-gray-500" /> 数据恢复（30 天内）
+            <Trash2 size={16} className="text-ink-3" /> 数据恢复（30 天内）
           </h2>
           {deleted.length === 0 ? (
-            <p className="text-xs text-gray-400">回收站为空</p>
+            <p className="text-xs text-ink-3">回收站为空</p>
           ) : (
             deleted.map((b) => (
-              <div key={b.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
-                <span className="text-gray-600">
+              <div key={b.id} className="flex items-center justify-between py-2 border-b border-line last:border-0 text-sm">
+                <span className="text-ink-2">
                   {dayKey(b.occurredAt)} · {b.type === 'expense' ? '-' : '+'}
                   {toYuan(b.amountCents)}
-                  {b.note && <span className="text-gray-400 text-xs ml-1">{b.note}</span>}
+                  {b.note && <span className="text-ink-3 text-xs ml-1">{b.note}</span>}
                 </span>
-                <button className="flex items-center gap-1 text-xs text-primary-dark text-gray-700 bg-gray-100 rounded-full px-3 py-1" onClick={() => void restoreBill(b.id).then(() => toast('已恢复'))}>
+                <button className="flex items-center gap-1 text-xs text-ink-2 bg-fill rounded-full px-3 py-1" onClick={() => void restoreBill(b.id).then(() => toast('已恢复'))}>
                   <RotateCcw size={12} /> 恢复
                 </button>
               </div>
@@ -105,8 +105,8 @@ export function DataPage() {
 
       <Sheet open={!!importData} onClose={() => setImportData(null)} title="选择导入方式">
         <div className="px-4 pb-6 space-y-3">
-          <p className="text-xs text-gray-400">导入文件共 {importData?.bills.length ?? 0} 笔账单</p>
-          <button className="w-full h-11 rounded-xl bg-gray-100 text-sm" onClick={() => void doImport('merge')}>
+          <p className="text-xs text-ink-3">导入文件共 {importData?.bills.length ?? 0} 笔账单</p>
+          <button className="w-full h-11 rounded-xl bg-fill text-sm" onClick={() => void doImport('merge')}>
             合并（保留本地，同 id 取较新）
           </button>
           <button className="w-full h-11 rounded-xl bg-danger text-white text-sm font-medium" onClick={() => void doImport('overwrite')}>
@@ -121,7 +121,7 @@ export function DataPage() {
 function Btn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-sm" onClick={onClick}>
-      <span className="text-gray-600">{icon}</span>
+      <span className="text-ink-2">{icon}</span>
       {label}
     </button>
   );

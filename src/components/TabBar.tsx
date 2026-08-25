@@ -14,7 +14,7 @@ export function TabBar() {
   const location = useLocation();
   if (location.pathname.startsWith('/settings')) return null;
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-line z-30 pb-safe">
       <div className="grid grid-cols-5 h-14 items-center">
         {tabs.slice(0, 2).map((t) => (
           <TabItem key={t.to} {...t} />
@@ -22,7 +22,7 @@ export function TabBar() {
         <div className="flex justify-center">
           <button
             aria-label="记一笔"
-            className="w-14 h-14 -mt-6 rounded-full bg-primary shadow-lg flex items-center justify-center text-gray-900 active:scale-95 transition-transform"
+            className="w-14 h-14 -mt-6 rounded-full bg-primary shadow-lg flex items-center justify-center text-on-primary active:scale-95 transition-transform"
             onClick={() => openEntry(null)}
           >
             <Plus size={28} strokeWidth={2.4} />
@@ -41,8 +41,8 @@ function TabItem({ to, label, icon: Icon }: { to: string; label: string; icon: t
     <NavLink to={to} end={to === '/'} className="flex flex-col items-center justify-center gap-0.5 h-full">
       {({ isActive }) => (
         <>
-          <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? 'text-gray-900' : 'text-gray-400'} />
-          <span className={`text-[11px] ${isActive ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{label}</span>
+          <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? 'text-ink' : 'text-ink-3'} />
+          <span className={`text-[11px] ${isActive ? 'text-ink font-medium' : 'text-ink-3'}`}>{label}</span>
         </>
       )}
     </NavLink>

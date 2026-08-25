@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { SettingsShell, Toggle } from './SettingsShell';
 import { useData } from '../../store/data';
@@ -53,23 +53,23 @@ export function CategoriesPage() {
 
   return (
     <SettingsShell title="分类设置">
-      <div className="flex gap-6 justify-center py-3 bg-white mb-2">
+      <div className="flex gap-6 justify-center py-3 bg-card mb-2">
         {(['expense', 'income'] as BillType[]).map((t) => (
-          <button key={t} className={`text-sm pb-1 border-b-2 ${tab === t ? 'border-gray-900 font-medium' : 'border-transparent text-gray-400'}`} onClick={() => setTab(t)}>
+          <button key={t} className={`text-sm pb-1 border-b-2 ${tab === t ? 'border-ink font-medium' : 'border-transparent text-ink-3'}`} onClick={() => setTab(t)}>
             {t === 'expense' ? '支出' : '收入'}
           </button>
         ))}
       </div>
-      <div className="bg-white">
+      <div className="bg-card">
         {list.map((c) => (
-          <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
+          <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-line">
             <button className="flex items-center gap-3 flex-1 text-left" onClick={() => { setEditing(c); setName(c.name); setIcon(c.icon); }}>
-              <span className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+              <span className="w-9 h-9 rounded-full bg-fill flex items-center justify-center text-ink-2">
                 <CatIcon name={c.icon} className="w-5 h-5" />
               </span>
               <span className="text-sm">
                 {c.name}
-                {c.hidden && <span className="ml-1 text-xs text-gray-400">（已隐藏）</span>}
+                {c.hidden && <span className="ml-1 text-xs text-ink-3">（已隐藏）</span>}
               </span>
             </button>
             {!c.builtin && (
@@ -89,10 +89,10 @@ export function CategoriesPage() {
 
       <Sheet open={addOpen || !!editing} onClose={() => { setAddOpen(false); setEditing(null); }} title={editing ? '编辑分类' : '添加分类'}>
         <div className="px-4 pb-6">
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="分类名称" className="w-full h-11 px-4 rounded-xl bg-gray-100 outline-none mb-3" />
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="分类名称" className="w-full h-11 px-4 rounded-xl bg-fill outline-none mb-3" />
           <div className="grid grid-cols-6 gap-2 max-h-40 overflow-auto hide-scrollbar mb-4">
             {ICON_CHOICES.map((k) => (
-              <button key={k} className={`h-11 rounded-xl flex items-center justify-center ${icon === k ? 'bg-primary' : 'bg-gray-100 text-gray-600'}`} onClick={() => setIcon(k)}>
+              <button key={k} className={`h-11 rounded-xl flex items-center justify-center ${icon === k ? 'bg-primary text-on-primary' : 'bg-fill text-ink-2'}`} onClick={() => setIcon(k)}>
                 <CatIcon name={k} className="w-5 h-5" />
               </button>
             ))}

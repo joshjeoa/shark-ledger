@@ -26,7 +26,7 @@ export function MonthPicker({ open, value, onChange, onClose }: { open: boolean;
             return (
               <button
                 key={m}
-                className={`h-11 rounded-xl text-sm font-medium ${active ? 'bg-primary text-gray-900' : 'bg-gray-100 text-gray-700'}`}
+                className={`h-11 rounded-xl text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'bg-fill text-ink-2'}`}
                 onClick={() => {
                   onChange(`${year}-${p2(m)}`);
                   onClose();
@@ -38,7 +38,7 @@ export function MonthPicker({ open, value, onChange, onClose }: { open: boolean;
           })}
         </div>
         <button
-          className="w-full h-11 mt-4 rounded-xl bg-gray-100 text-sm text-gray-700"
+          className="w-full h-11 mt-4 rounded-xl bg-fill text-sm text-ink-2"
           onClick={() => {
             onChange(`${now.getFullYear()}-${p2(now.getMonth() + 1)}`);
             onClose();

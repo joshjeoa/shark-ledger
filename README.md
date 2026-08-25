@@ -12,10 +12,11 @@
 
 ## ✨ 特性
 
-- **记一笔** — 自绘数字键盘，支出/收入、分类、备注、日期一步完成，3 秒记完一笔
+- **暗夜模式** — 跟随系统 / 浅色 / 深色三态切换，全站语义化色彩 token（iOS HIG 色板），图表同步适配
+- **记一笔** — 自绘数字键盘（退格长按连删），支出/收入、分类、备注、日期一步完成；支持连续记账（保存后自动清空金额，分类保留）
 - **明细** — 按日分组流水、月度切换、全文搜索、30 天回收站（软删除可恢复）
 - **图表** — 周/月/年收支趋势折线图、分类排行榜，Chart.js canvas 渲染，触控流畅
-- **预算** — 月度预算环 + 剩余额度实时展示，超支一目了然
+- **预算 + 洞察** — 月度预算环 + 剩余额度实时展示；日均支出、最高单笔、环比上月、月底线性预估
 - **多账本** — 生活账 / 报销账分账本独立核算
 - **数据自由** — CSV / JSON 一键导入导出；CSV 带 BOM + CRLF，Excel / WPS 打开中文不乱码
 - **云备份（可选）** — GitHub Gist / WebDAV / R2 三种同步源，AES-GCM 端到端加密后才上传
@@ -25,19 +26,23 @@
 
 ## 📱 界面
 
-| 明细 | 图表 | 预算 |
+| 浅色 · 明细 | 深色 · 明细 | 深色 · 图表 |
 |:---:|:---:|:---:|
-| ![明细页](docs/screenshots/detail.png) | ![图表页](docs/screenshots/chart.png) | ![预算页](docs/screenshots/budget.png) |
+| ![浅色明细](docs/screenshots/light-home.png) | ![深色明细](docs/screenshots/detail.png) | ![深色图表](docs/screenshots/dark-chart.png) |
+
+| 预算 | 深色 · 发现（洞察） |
+|:---:|:---:|
+| ![预算页](docs/screenshots/budget.png) | ![深色发现](docs/screenshots/dark-discover.png) |
 
 ## 🛠 技术栈
 
 | 层 | 选型 | 说明 |
 |---|---|---|
 | 构建 | Vite 5 + React 18 + TypeScript (strict) | `build.target='es2020'`，兼容 iOS 15+ |
-| 样式 | TailwindCSS 3.4 + CSS Variables | 锁 v3：v4 的 oklch 不兼容 iOS < 15.4 |
+| 样式 | TailwindCSS 3.4 + CSS Variables | 锁 v3：v4 的 oklch 不兼容 iOS < 15.4；颜色全量语义 token 化，暗夜模式即换 token 值 |
 | 路由 / 状态 | React Router 6 + Zustand 4 | 无模板代码 |
 | 存储 | IndexedDB（idb 封装 repository） | 金额一律整数分存储，杜绝浮点误差 |
-| 图表 | Chart.js 4 | 路由级懒加载，触控性能好 |
+| 图表 | Chart.js 4 | 路由级懒加载，触控性能好，色板读 CSS 变量跟随主题 |
 | PWA | vite-plugin-pwa (Workbox) | 离线缓存 + 更新检测提示 |
 
 ## 🚀 快速开始

@@ -2,11 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+ * 语义色板（iOS HIG 风格）
+ * 全项目禁止再写 bg-white / text-gray-* 等硬编码颜色类，
+ * 一律使用语义 token：surface / card / fill / line / ink / header…
+ * 暗夜模式 = 每个 token 换一套值，而非逐点补丁。
+ * ============================================================ */
 :root {
   --primary: #f5c518;
   --danger: #e64340;
   --success: #07c160;
   --muted: #9ca3af;
+
+  /* 中性层 */
+  --surface: #f2f2f7; /* 页面底 */
+  --card: #ffffff; /* 卡片/浮层 */
+  --fill: #e9e9ec; /* 输入框、次级按钮、图标底 */
+  --line: #e5e5ea; /* 分隔线、描边 */
+
+  /* 文字 */
+  --ink: #1c1c1e; /* 主文字 */
+  --ink-2: #55555a; /* 次级文字 */
+  --ink-3: #8e8e93; /* 三级文字、占位、chevron */
+
+  /* 品牌色上的文字（黄底恒黑） */
+  --on-primary: #14161a;
+
+  /* Header（浅色 = 品牌色；暗色 = 沉浸深色） */
+  --header-bg: var(--primary);
+  --header-ink: #1f2937;
+  --header-fill: rgba(255, 255, 255, 0.85);
+  --header-fill-ink: #1c1c1e;
+
+  /* Toast（Apple HUD 风格：暗色模式下反转为浅底深字） */
+  --toast-bg: rgba(28, 28, 30, 0.92);
+  --toast-ink: #ffffff;
+
+  /* 遮罩 */
+  --scrim: rgba(0, 0, 0, 0.4);
+}
+
+.dark {
+  --danger: #ff6961;
+  --success: #30d158;
+  --muted: #8e8e93;
+
+  --surface: #000000;
+  --card: #1c1c1e;
+  --fill: #2c2c2e;
+  --line: #38383a;
+
+  --ink: #f2f2f7;
+  --ink-2: #aeaeb2;
+  --ink-3: #98989d;
+
+  --on-primary: #14161a;
+
+  --header-bg: #1c1c1e;
+  --header-ink: #f2f2f7;
+  --header-fill: rgba(255, 255, 255, 0.12);
+  --header-fill-ink: #f2f2f7;
+
+  --toast-bg: rgba(242, 242, 247, 0.95);
+  --toast-ink: #1c1c1e;
+
+  --scrim: rgba(0, 0, 0, 0.6);
 }
 
 html,
@@ -16,12 +76,29 @@ body {
 
 body {
   margin: 0;
-  background: #f5f5f5;
-  color: #1f2937;
+  background: var(--surface);
+  color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   color-scheme: light;
+}
+
+.dark body {
+  color-scheme: dark;
+}
+
+/* 主题切换时的全局渐变：仅在切换瞬间挂载 350ms，避免影响日常交互 */
+.theme-anim,
+.theme-anim *,
+.theme-anim *::before,
+.theme-anim *::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    fill 0.3s ease,
+    stroke 0.3s ease !important;
 }
 
 /* iOS <15.4 无 dvh：级联回退 + JS 变量兜底 */
@@ -35,7 +112,7 @@ body {
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
 }
 .pt-safe {
-  padding-top: calc(env(safe-area-inset-top) + 8px);
+  padding-top: env(safe-area-inset-top) + 8px;
 }
 
 .no-callout {

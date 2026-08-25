@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
+import { useTheme } from '../utils/theme';
 import { dayKey, isoWeekNumber, monthKey, monthKeyOffset, monthLabelCN, shortMD, startOfWeek, daysInMonth } from '../utils/date';
 import { toYuan } from '../utils/money';
 import { CatIcon } from '../utils/iconMap';
@@ -9,15 +10,21 @@ import type { BillType } from '../types';
 
 type Period = 'week' | 'month' | 'year';
 
+/** 从当前生效的 CSS 变量取色（暗色切换后图表重渲时取到新值） */
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 export function ChartPage() {
   const { bills, categories, currentLedgerId } = useData();
   const hide = useSettings((s) => s.hideAmount);
+  const theme = useTheme();
   const [metric, setMetric] = useState<BillType>('expense');
   const [period, setPeriod] = useState<Period>('week');
   const [offset, setOffset] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const now = new Date();
+  // 时间基线固定为挂载时刻：作为 useMemo 依赖保证稳定，避免每次渲染重算并重建图表
+  const [now] = useState(() => new Date());
   const curMonth = monthKey(now.getTime());
 
   const model = useMemo(() => {
@@ -32,7 +39,7 @@ export function ChartPage() {
       start.setDate(start.getDate() + offset * 7);
       labels = [];
       buckets = new Array(7).fill(0);
-      const todayK = dayKey(now.getTime());
+      const todayK = dayKey(Date.now());
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(d.getDate() + i);
@@ -82,14 +89,16 @@ export function ChartPage() {
       .slice(0, 10);
 
     return { labels, buckets, total, avg, ranking };
-  }, [bills, categories, currentLedgerId, metric, period, offset, curMonth, now.getTime()]);
+  }, [bills, categories, currentLedgerId, metric, period, offset, curMonth, now]);
 
-  // Chart.js 懒加载渲染
+  // Chart.js 懒加载渲染（依赖 theme：明暗切换时用新色板重建）
   useEffect(() => {
     let chart: { destroy: () => void } | null = null;
     let cancelled = false;
     void import('chart.js/auto').then(({ default: Chart }) => {
       if (cancelled || !canvasRef.current) return;
+      const ink = cssVar('--ink');
+      const ink3 = cssVar('--ink-3');
       chart = new Chart(canvasRef.current, {
         type: 'line',
         data: {
@@ -97,16 +106,16 @@ export function ChartPage() {
           datasets: [
             {
               data: model.buckets.map((c) => c / 100),
-              borderColor: '#333',
-              backgroundColor: '#F5C518',
+              borderColor: ink,
+              backgroundColor: cssVar('--primary'),
               pointRadius: 3,
-              pointBackgroundColor: '#F5C518',
+              pointBackgroundColor: cssVar('--primary'),
               tension: 0,
               borderWidth: 1.5,
             },
             {
               data: model.labels.map(() => model.avg / 100),
-              borderColor: '#bbb',
+              borderColor: ink3,
               borderDash: [5, 5],
               pointRadius: 0,
               borderWidth: 1,
@@ -118,8 +127,8 @@ export function ChartPage() {
           maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `¥${(ctx.parsed.y ?? 0).toFixed(2)}` } } },
           scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-            y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: ink3 } },
+            y: { beginAtZero: true, ticks: { font: { size: 10 }, color: ink3 } },
           },
         },
       });
@@ -128,7 +137,7 @@ export function ChartPage() {
       cancelled = true;
       chart?.destroy();
     };
-  }, [model]);
+  }, [model, theme]);
 
   const offsets = [-4, -3, -2, -1, 0];
   const offsetLabel = (o: number) => {
@@ -144,18 +153,18 @@ export function ChartPage() {
   const show = (c: number) => (hide ? '****' : toYuan(c));
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
-      <header className="bg-primary pt-safe">
+    <div className="h-full flex flex-col bg-surface">
+      <header className="bg-header pt-safe">
         <div className="px-4 pt-2 pb-3">
           <div className="flex items-center justify-center gap-2">
-            <select value={metric} onChange={(e) => setMetric(e.target.value as BillType)} className="bg-transparent font-bold text-lg outline-none appearance-none text-center">
+            <select value={metric} onChange={(e) => setMetric(e.target.value as BillType)} className="bg-transparent font-bold text-lg outline-none appearance-none text-center text-header-ink">
               <option value="expense">支出</option>
               <option value="income">收入</option>
             </select>
           </div>
-          <div className="grid grid-cols-3 mt-3 rounded-lg overflow-hidden border border-gray-900/20 text-sm text-center">
+          <div className="grid grid-cols-3 mt-3 rounded-lg overflow-hidden bg-header-fill text-sm text-center">
             {(['week', 'month', 'year'] as Period[]).map((p) => (
-              <button key={p} className={`h-9 ${period === p ? 'bg-gray-900 text-primary font-medium' : 'bg-primary/90'}`} onClick={() => { setPeriod(p); setOffset(0); }}>
+              <button key={p} className={`h-9 ${period === p ? 'bg-primary text-on-primary font-medium' : 'text-header-ink'}`} onClick={() => { setPeriod(p); setOffset(0); }}>
                 {p === 'week' ? '周' : p === 'month' ? '月' : '年'}
               </button>
             ))}
@@ -163,43 +172,43 @@ export function ChartPage() {
         </div>
       </header>
 
-      <div className="flex gap-4 px-4 py-2 overflow-auto hide-scrollbar bg-white border-b border-gray-100">
+      <div className="flex gap-4 px-4 py-2 overflow-auto hide-scrollbar bg-card border-b border-line">
         {offsets.map((o) => (
-          <button key={o} className={`shrink-0 text-sm pb-0.5 ${offset === o ? 'text-gray-900 font-semibold border-b-2 border-gray-900' : 'text-gray-300'}`} onClick={() => setOffset(o)}>
+          <button key={o} className={`shrink-0 text-sm pb-0.5 ${offset === o ? 'text-ink font-semibold border-b-2 border-ink' : 'text-ink-3'}`} onClick={() => setOffset(o)}>
             {offsetLabel(o)}
           </button>
         ))}
       </div>
 
       <main className="flex-1 overflow-auto pb-24">
-        <div className="bg-white px-4 pt-3">
-          <p className="text-sm text-gray-700">
+        <div className="bg-card px-4 pt-3">
+          <p className="text-sm text-ink-2">
             总{metric === 'expense' ? '支出' : '收入'}：{show(model.total)}
           </p>
-          <p className="text-xs text-gray-400 mb-2">平均值：{show(model.avg)}</p>
+          <p className="text-xs text-ink-3 mb-2">平均值：{show(model.avg)}</p>
           <div className="h-52">
             <canvas ref={canvasRef} />
           </div>
         </div>
 
-        <div className="bg-white mt-2 px-4 py-3">
+        <div className="bg-card mt-2 px-4 py-3">
           <h2 className="font-semibold mb-3">{metric === 'expense' ? '支出' : '收入'}排行榜</h2>
           {model.ranking.length === 0 ? (
             <EmptyState text="该周期还没有记录" />
           ) : (
             model.ranking.map(({ cat, cents, pct }) => (
-              <div key={cat?.id ?? 'x'} className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
-                <span className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+              <div key={cat?.id ?? 'x'} className="flex items-center gap-3 py-3 border-b border-line last:border-0">
+                <span className="w-10 h-10 rounded-full bg-fill flex items-center justify-center text-ink-2">
                   <CatIcon name={cat?.icon ?? ''} className="w-5 h-5" />
                 </span>
                 <div className="flex-1">
                   <div className="flex justify-between text-sm mb-1">
                     <span>
-                      {cat?.name ?? '未分类'} <span className="text-gray-400 text-xs">{pct.toFixed(1)}%</span>
+                      {cat?.name ?? '未分类'} <span className="text-ink-3 text-xs">{pct.toFixed(1)}%</span>
                     </span>
                     <span className="font-medium">{show(cents)}</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-gray-100">
+                  <div className="h-1.5 rounded-full bg-fill">
                     <div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.max(pct, 2)}%` }} />
                   </div>
                 </div>

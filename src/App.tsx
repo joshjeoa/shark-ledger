@@ -5,6 +5,7 @@ import { useData } from './store/data';
 import { useSettings } from './store/settings';
 import { useUI } from './store/ui';
 import { setupAppHeight } from './utils/compat';
+import { applyTheme } from './utils/theme';
 import { refreshSyncUI, setupSyncLifecycle } from './sync/manager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TabBar } from './components/TabBar';
@@ -42,6 +43,7 @@ export default function App() {
   const ready = useData((s) => s.ready);
   const mode = useData((s) => s.mode);
   const themeColor = useSettings((s) => s.themeColor);
+  const appearance = useSettings((s) => s.appearance);
   const updateReady = useUI((s) => s.updateReady);
   const runUpdate = useUI((s) => s.runUpdate);
 
@@ -57,19 +59,27 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
+  // 主题：品牌色仍写入 --primary（供按钮/图表取用），外观决定整体明暗
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', themeColor);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', themeColor);
-  }, [themeColor]);
+    applyTheme(appearance, themeColor);
+  }, [themeColor, appearance]);
+
+  // auto 模式下系统明暗变化时实时跟进
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyTheme(useSettings.getState().appearance, useSettings.getState().themeColor);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   if (!ready) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-primary">
-        <div className="w-20 h-20 rounded-3xl bg-white flex items-center justify-center text-4xl font-bold text-gray-900 shadow-lg">
+      <div className="h-full flex flex-col items-center justify-center bg-header">
+        <div className="w-20 h-20 rounded-3xl bg-card flex items-center justify-center text-4xl font-bold text-ink shadow-lg">
           ¥
         </div>
-        <p className="mt-4 text-sm font-medium text-gray-900">鲨鱼记账</p>
+        <p className="mt-4 text-sm font-medium text-header-ink">鲨鱼记账</p>
       </div>
     );
   }
@@ -81,7 +91,7 @@ export default function App() {
           {mode !== 'idb' && (
             <div
               className={`fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 text-xs text-center ${
-                mode === 'memory' ? 'bg-danger text-white' : 'bg-primary text-gray-900'
+                mode === 'memory' ? 'bg-danger text-white' : 'bg-primary text-on-primary'
               }`}
             >
               {mode === 'memory'
@@ -91,7 +101,7 @@ export default function App() {
           )}
 
           {updateReady && (
-            <div className="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 bg-gray-900 text-white text-xs flex items-center justify-between gap-2">
+            <div className="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 bg-toast-bg text-toast-ink text-xs flex items-center justify-between gap-2">
               <span>检测到新版本可用</span>
               <div className="flex gap-3">
                 <button className="font-medium underline" onClick={() => runUpdate?.()}>

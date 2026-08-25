@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { BillType } from '../types';
+import type { Appearance } from '../utils/theme';
 
 interface SettingsState {
   hideAmount: boolean;
   defaultType: BillType;
   colorAmounts: boolean;
   themeColor: string;
+  appearance: Appearance;
   nickname: string;
   lastCategory: Partial<Record<BillType, string>>;
   guideSeen: boolean;
@@ -45,6 +47,7 @@ export const useSettings = create<SettingsState>()(
       defaultType: 'expense',
       colorAmounts: false,
       themeColor: '#F5C518',
+      appearance: 'auto',
       nickname: '我',
       lastCategory: {},
       guideSeen: false,

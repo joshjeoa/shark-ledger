@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { SettingsShell } from './SettingsShell';
 import { useData } from '../../store/data';
@@ -44,9 +44,9 @@ export function AccountsPage() {
 
   return (
     <SettingsShell title="收支账户">
-      <div className="bg-white mt-2">
+      <div className="bg-card mt-2">
         {list.map((a) => (
-          <div key={a.id} className="flex items-center px-4 py-3.5 border-b border-gray-50">
+          <div key={a.id} className="flex items-center px-4 py-3.5 border-b border-line">
             <button className="flex-1 text-left text-sm" onClick={() => { setEditing(a); setName(a.name); setOpen(true); }}>
               {a.name}
             </button>
@@ -64,7 +64,7 @@ export function AccountsPage() {
 
       <Sheet open={open} onClose={() => setOpen(false)} title={editing ? '编辑账户' : '添加账户'}>
         <div className="px-4 pb-6">
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="账户名称（如：现金/招行卡）" className="w-full h-11 px-4 rounded-xl bg-gray-100 outline-none mb-4" />
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="账户名称（如：现金/招行卡）" className="w-full h-11 px-4 rounded-xl bg-fill outline-none mb-4" />
           <button className="w-full h-11 rounded-xl bg-primary font-medium" onClick={() => void save()}>
             保存
           </button>

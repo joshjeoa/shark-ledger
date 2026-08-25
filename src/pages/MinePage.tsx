@@ -20,11 +20,11 @@ export function MinePage() {
   }, [bills]);
 
   return (
-    <div className="h-full overflow-auto bg-gray-100 pb-24">
-      <header className="bg-primary pt-safe">
+    <div className="h-full overflow-auto bg-surface pb-24">
+      <header className="bg-header pt-safe">
         <div className="px-4 pt-6 pb-8">
           <div className="flex items-center gap-3">
-            <span className="w-14 h-14 rounded-full bg-white/70 flex items-center justify-center text-xl font-bold">
+            <span className="w-14 h-14 rounded-full bg-header-fill text-header-fill-ink flex items-center justify-center text-xl font-bold">
               {settings.nickname.slice(0, 1) || '我'}
             </span>
             <span className="text-xl font-bold">{settings.nickname}</span>
@@ -43,7 +43,7 @@ export function MinePage() {
       </header>
 
       <div className="px-3 -mt-3 space-y-3">
-        <div className="bg-white rounded-2xl divide-y divide-gray-50">
+        <div className="bg-card rounded-2xl divide-y divide-line">
           <Row icon={<Settings size={20} />} label="设置" onClick={() => navigate('/settings')} />
           <Row
             icon={<Share size={20} />}
@@ -59,7 +59,7 @@ export function MinePage() {
       </div>
 
       <Sheet open={guideOpen} onClose={() => setGuideOpen(false)} title="添加到主屏幕">
-        <div className="px-4 pb-6 text-sm text-gray-600 space-y-2">
+        <div className="px-4 pb-6 text-sm text-ink-2 space-y-2">
           {isIOS ? (
             <>
               <p>1. 点击 Safari 底部的「分享」按钮</p>
@@ -72,7 +72,7 @@ export function MinePage() {
               <p>2. 选择「添加到主屏幕」/「安装应用」</p>
             </>
           )}
-          <p className="text-xs text-gray-400 pt-2">安装后离线也可正常使用，数据保存在本机。</p>
+          <p className="text-xs text-ink-3 pt-2">安装后离线也可正常使用，数据保存在本机。</p>
         </div>
       </Sheet>
     </div>
@@ -82,9 +82,9 @@ export function MinePage() {
 function Row({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button className="w-full flex items-center gap-3 px-4 py-4 text-left" onClick={onClick}>
-      <span className="text-gray-700">{icon}</span>
+      <span className="text-ink-2">{icon}</span>
       <span className="flex-1 text-sm">{label}</span>
-      <ChevronRight size={16} className="text-gray-300" />
+      <ChevronRight size={16} className="text-ink-3" />
     </button>
   );
 }

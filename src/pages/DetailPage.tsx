@@ -76,8 +76,8 @@ export function DetailPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* 黄色 Header */}
-      <header className="bg-primary pt-safe">
+      {/* Header（浅色=品牌色，暗色=沉浸深色） */}
+      <header className="bg-header pt-safe">
         <div className="px-4 pt-2 pb-3">
           <div className="flex items-center justify-between">
             <button className="flex items-center gap-0.5 text-sm font-medium" onClick={() => setLedgerOpen(true)}>
@@ -121,13 +121,13 @@ export function DetailPage() {
 
       {/* 搜索栏 */}
       {searchOpen && (
-        <div className="bg-primary px-4 pb-3">
-          <div className="flex items-center gap-2 bg-white rounded-full px-3 h-9">
-            <Search size={16} className="text-gray-400" />
-            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索备注 / 分类 / 金额" className="flex-1 text-sm outline-none" />
+        <div className="bg-header px-4 pb-3">
+          <div className="flex items-center gap-2 bg-header-fill text-header-fill-ink rounded-full px-3 h-9">
+            <Search size={16} className="text-ink-3" />
+            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索备注 / 分类 / 金额" className="flex-1 text-sm outline-none bg-transparent" />
             {query && (
               <button onClick={() => setQuery('')} aria-label="清空">
-                <X size={16} className="text-gray-400" />
+                <X size={16} className="text-ink-3" />
               </button>
             )}
           </div>
@@ -135,7 +135,7 @@ export function DetailPage() {
       )}
 
       {/* 列表 */}
-      <main className="flex-1 overflow-auto bg-gray-50 rounded-t-2xl -mt-2 relative pb-24">
+      <main className="flex-1 overflow-auto bg-surface rounded-t-2xl -mt-2 relative pb-24">
         {groups.length === 0 ? (
           <EmptyState text={query ? '没有找到相关账单' : '开始记第一笔吧'} actionLabel={query ? undefined : '记一笔'} onAction={() => openEntry(null)} />
         ) : (
@@ -145,7 +145,7 @@ export function DetailPage() {
             const dayExpense = items.filter((b) => b.type === 'expense').reduce((s, b) => s + b.amountCents, 0);
             return (
               <section key={day}>
-                <div className="flex justify-between px-4 py-2 text-xs text-gray-400">
+                <div className="flex justify-between px-4 py-2 text-xs text-ink-3">
                   <span>
                     {day.slice(5).replace('-', '月')}日 {weekdayLabel(t)}
                   </span>
@@ -155,7 +155,7 @@ export function DetailPage() {
                     {dayExpense > 0 && `支出：${show(dayExpense)}`}
                   </span>
                 </div>
-                <div className="bg-white">
+                <div className="bg-card">
                   {items.map((b) => (
                     <BillRow key={b.id} bill={b} hide={hide} color={settings.colorAmounts} onTap={() => openEntry(b)} onDelete={() => void onDelete(b)} catName={categories.find((c) => c.id === b.categoryId)} />
                   ))}
@@ -173,7 +173,7 @@ export function DetailPage() {
           {ledgers.map((l) => (
             <button
               key={l.id}
-              className={`w-full h-11 rounded-xl text-sm ${l.id === currentLedgerId ? 'bg-primary font-medium' : 'bg-gray-100'}`}
+              className={`w-full h-11 rounded-xl text-sm ${l.id === currentLedgerId ? 'bg-primary text-on-primary font-medium' : 'bg-fill text-ink-2'}`}
               onClick={() => {
                 setCurrentLedger(l.id);
                 setLedgerOpen(false);
@@ -182,7 +182,7 @@ export function DetailPage() {
               {l.name}
             </button>
           ))}
-          <button className="w-full h-11 rounded-xl text-sm text-gray-500 bg-gray-50" onClick={() => { setLedgerOpen(false); navigate('/settings/ledgers'); }}>
+          <button className="w-full h-11 rounded-xl text-sm text-ink-3 bg-surface" onClick={() => { setLedgerOpen(false); navigate('/settings/ledgers'); }}>
             管理账本
           </button>
         </div>
@@ -204,10 +204,10 @@ function BillRow({ bill, hide, color, onTap, onDelete, catName }: { bill: Bill; 
   const stop = () => {
     if (timer.current) clearTimeout(timer.current);
   };
-  const amountColor = color ? (bill.type === 'expense' ? 'text-danger' : 'text-success') : 'text-gray-800';
+  const amountColor = color ? (bill.type === 'expense' ? 'text-danger' : 'text-success') : 'text-ink';
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 no-callout"
+      className="flex items-center gap-3 px-4 py-3 border-b border-line no-callout"
       onTouchStart={start}
       onTouchEnd={stop}
       onTouchMove={stop}
@@ -219,12 +219,12 @@ function BillRow({ bill, hide, color, onTap, onDelete, catName }: { bill: Bill; 
         onTap();
       }}
     >
-      <span className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+      <span className="w-10 h-10 rounded-full bg-fill flex items-center justify-center text-ink-2">
         <CatIcon name={catName?.icon ?? ''} className="w-5 h-5" />
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 truncate">{catName?.name ?? '未分类'}</p>
-        {bill.note && <p className="text-xs text-gray-400 truncate">{bill.note}</p>}
+        <p className="text-sm text-ink truncate">{catName?.name ?? '未分类'}</p>
+        {bill.note && <p className="text-xs text-ink-3 truncate">{bill.note}</p>}
       </div>
       <span className={`text-base font-medium ${amountColor}`}>
         {bill.type === 'expense' ? '-' : '+'}
