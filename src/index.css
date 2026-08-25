@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #f5c518;
+  --danger: #e64340;
+  --success: #07c160;
+  --muted: #9ca3af;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f5f5f5;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  color-scheme: light;
+}
+
+/* iOS <15.4 无 dvh：级联回退 + JS 变量兜底 */
+#root {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+}
+
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top) + 8px);
+}
+
+.no-callout {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sheet-up {
+  animation: sheet-up 0.25s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fade-in 0.2s ease-out;
+}
