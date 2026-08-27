@@ -8,6 +8,8 @@ import { refreshSyncUI, scheduleSync } from '../sync/manager';
 interface DataState {
   ready: boolean;
   mode: StorageMode;
+  /** 最近一次持久化写入是否失败（配额满/存储损坏），App 顶部横幅据此提醒导出 */
+  writeFailed: boolean;
   bills: Bill[];
   categories: Category[];
   accounts: Account[];
@@ -34,6 +36,7 @@ interface DataState {
 export const useData = create<DataState>((set, get) => ({
   ready: false,
   mode: 'memory',
+  writeFailed: false,
   bills: [],
   categories: [],
   accounts: [],
@@ -46,7 +49,7 @@ export const useData = create<DataState>((set, get) => ({
     await repo.init();
     repo.onChange = () => get().sync();
     const saved = repo.getMeta<string>('currentLedgerId');
-    set({ ready: true, mode: repo.mode, currentLedgerId: saved ?? repo.data.ledgers[0]?.id ?? 'builtin-ledger' });
+    set({ ready: true, mode: repo.mode, writeFailed: repo.writeFailed, currentLedgerId: saved ?? repo.data.ledgers[0]?.id ?? 'builtin-ledger' });
     get().sync();
     refreshSyncUI(); // 冷启动后依据已加载的配置刷新同步芯片状态
   },
@@ -59,6 +62,7 @@ export const useData = create<DataState>((set, get) => ({
       tags: [...repo.data.tags],
       ledgers: [...repo.data.ledgers],
       budgets: [...repo.data.budgets],
+      writeFailed: repo.writeFailed,
     }),
 
   refresh: async () => {

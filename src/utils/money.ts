@@ -14,6 +14,7 @@ export function toYuan(cents: number): string {
   return `${sign}${Math.floor(c / 100)}.${String(c % 100).padStart(2, '0')}`;
 }
 
-export function addCents(a: number, b: number): number {
-  return a + b;
+/** 整数分转元并去掉小数尾零（1200→"12"，1250→"12.5"），用于编辑回填等紧凑展示 */
+export function toYuanTrim(cents: number): string {
+  return toYuan(cents).replace(/\.?0+$/, '');
 }

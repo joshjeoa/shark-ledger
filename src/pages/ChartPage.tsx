@@ -23,8 +23,16 @@ export function ChartPage() {
   const [period, setPeriod] = useState<Period>('week');
   const [offset, setOffset] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // 时间基线固定为挂载时刻：作为 useMemo 依赖保证稳定，避免每次渲染重算并重建图表
-  const [now] = useState(() => new Date());
+  // 时间基线固定为状态：作为 useMemo 依赖保证稳定，避免每次渲染重算并重建图表
+  const [now, setNow] = useState(() => new Date());
+  // PWA 从后台恢复（可能已跨天）时刷新时间基线，避免"今天"标记与天数口径停留在昨天
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setNow(new Date());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   const curMonth = monthKey(now.getTime());
 
   const model = useMemo(() => {
@@ -40,18 +48,21 @@ export function ChartPage() {
       labels = [];
       buckets = new Array(7).fill(0);
       const todayK = dayKey(Date.now());
+      // 按日历日 key 分桶：DST 时区一天可能只有 23/25 小时，毫秒除法会把账单分错桶
+      const dayIdx = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(d.getDate() + i);
         const k = dayKey(d.getTime());
+        dayIdx.set(k, i);
         labels.push(k === todayK ? '今天' : shortMD(d.getTime()));
       }
-      const startT = start.getTime();
-      const endT = startT + 7 * 86400000;
-      rankBills = inLedger.filter((b) => b.occurredAt >= startT && b.occurredAt < endT);
-      for (const b of rankBills) {
-        const idx = Math.floor((b.occurredAt - startT) / 86400000);
-        if (idx >= 0 && idx < 7) buckets[idx] = (buckets[idx] ?? 0) + b.amountCents;
+      rankBills = [];
+      for (const b of inLedger) {
+        const idx = dayIdx.get(dayKey(b.occurredAt));
+        if (idx === undefined) continue;
+        rankBills.push(b);
+        buckets[idx] = (buckets[idx] ?? 0) + b.amountCents;
       }
       elapsed = offset === 0 ? ((now.getDay() + 6) % 7) + 1 : 7;
     } else if (period === 'month') {

@@ -53,7 +53,12 @@ const gistAdapter: SyncAdapter = {
     if (!res.ok) throw new Error(httpReason(res.status));
     const json = (await res.json()) as { files?: Record<string, { content?: string }> };
     const content = json.files?.[FILENAME]?.content;
-    return content ? (JSON.parse(content) as BackupFile) : null;
+    if (!content) return null;
+    try {
+      return JSON.parse(content) as BackupFile;
+    } catch {
+      throw new Error('云端备份文件已损坏（不是有效的 JSON）');
+    }
   },
 };
 
@@ -86,7 +91,11 @@ const webdavAdapter: SyncAdapter = {
     const res = await fetch(cfg.relayUrl!, { headers: { 'x-target': target, Authorization: basicAuth(cfg) } });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(httpReason(res.status));
-    return (await res.json()) as BackupFile;
+    try {
+      return (await res.json()) as BackupFile;
+    } catch {
+      throw new Error('云端备份文件已损坏（不是有效的 JSON）');
+    }
   },
 };
 

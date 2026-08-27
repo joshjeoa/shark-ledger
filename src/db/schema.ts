@@ -17,7 +17,8 @@ export async function probeStorage(): Promise<StorageMode> {
     await tx.store.put(1, 'k');
     await tx.done;
     t.close();
-    void deleteDB('shark-probe');
+    // 另一标签页占用探测库时 deleteDB 会 reject，吞掉避免未处理的 Promise 异常
+    deleteDB('shark-probe').catch(() => {});
     return 'idb';
   } catch {
     /* fallthrough */

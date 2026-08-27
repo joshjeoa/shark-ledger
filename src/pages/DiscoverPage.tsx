@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, TrendingDown, TrendingUp, Minus, Zap, Crown, CalendarClock } from 'lucide-react';
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
@@ -16,7 +16,16 @@ export function DiscoverPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [input, setInput] = useState('');
 
-  const now = new Date();
+  // 时间基线固定为状态：作为 useMemo 依赖保证稳定（每次渲染 new Date() 会让下方全部 memo 失效）
+  const [now, setNow] = useState(() => new Date());
+  // PWA 从后台恢复（可能已跨天）时刷新时间基线，避免"本月/日均"停留在昨天
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setNow(new Date());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   const ym = monthKey(now.getTime());
   const sums = useMemo(() => {
     let income = 0;
@@ -44,9 +53,11 @@ export function DiscoverPage() {
       return acc;
     }, null);
 
-    // 上月同期（1 日 ~ 上月同号）支出，用于环比
+    // 上月同期（1 日 ~ 上月同号）支出，用于环比。
+    // 上月天数不足时（如 3/31 对 2 月）取上月最后一天，避免 Date 归一化把截止日溢出到本月
     const prevYm = monthKeyOffset(ym, -1);
-    const cutoff = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate(), 23, 59, 59).getTime();
+    const cutoffDay = Math.min(now.getDate(), daysInMonth(prevYm));
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - 1, cutoffDay, 23, 59, 59).getTime();
     let prevExpense = 0;
     for (const b of bills) {
       if (b.ledgerId !== currentLedgerId || b.deletedAt || b.type !== 'expense') continue;

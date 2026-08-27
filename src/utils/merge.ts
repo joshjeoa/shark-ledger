@@ -52,12 +52,17 @@ export function validateDump(data: unknown): { ok: boolean; errors: string[]; du
     'bills',
     (b) =>
       typeof b.id === 'string' &&
-      typeof b.amountCents === 'number' &&
+      Number.isSafeInteger(b.amountCents) &&
       (b.type === 'expense' || b.type === 'income') &&
       typeof b.categoryId === 'string' &&
       typeof b.occurredAt === 'number' &&
       typeof b.createdAt === 'number' &&
-      typeof b.updatedAt === 'number',
+      typeof b.updatedAt === 'number' &&
+      (b.note === undefined || typeof b.note === 'string') &&
+      (b.accountId === undefined || typeof b.accountId === 'string') &&
+      (b.ledgerId === undefined || typeof b.ledgerId === 'string') &&
+      (b.tagIds === undefined || (Array.isArray(b.tagIds) && b.tagIds.every((t) => typeof t === 'string'))) &&
+      (b.deletedAt === undefined || typeof b.deletedAt === 'number'),
   );
   arr(d.categories, 'categories', (c) => typeof c.id === 'string' && typeof c.name === 'string');
   arr(d.accounts, 'accounts', (a) => typeof a.id === 'string' && typeof a.name === 'string');
@@ -65,5 +70,7 @@ export function validateDump(data: unknown): { ok: boolean; errors: string[]; du
   arr(d.ledgers, 'ledgers', (l) => typeof l.id === 'string' && typeof l.name === 'string');
   arr(d.budgets, 'budgets', (b) => typeof b.yearMonth === 'string' && typeof b.amountCents === 'number');
   if (errors.length) return { ok: false, errors };
-  return { ok: true, errors: [], dump: d as FullDump['data'] };
+  // 归一化旧版/手工编辑备份中缺失的可选字段，杜绝 tagIds/note 为空时在 CSV 导出、编辑回填处崩溃
+  const normalized = bills.map((b) => ({ ...b, note: b.note ?? '', tagIds: b.tagIds ?? [] }));
+  return { ok: true, errors: [], dump: { ...d, bills: normalized } as FullDump['data'] };
 }

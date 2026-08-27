@@ -42,6 +42,7 @@ try {
 export default function App() {
   const ready = useData((s) => s.ready);
   const mode = useData((s) => s.mode);
+  const writeFailed = useData((s) => s.writeFailed);
   const themeColor = useSettings((s) => s.themeColor);
   const appearance = useSettings((s) => s.appearance);
   const updateReady = useUI((s) => s.updateReady);
@@ -88,7 +89,11 @@ export default function App() {
     <ErrorBoundary>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="relative h-full overflow-hidden">
-          {mode !== 'idb' && (
+          {writeFailed ? (
+            <div className="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 text-xs text-center bg-danger text-white">
+              数据保存失败（存储空间不足或已损坏）：新记录可能未持久化，请立即导出备份
+            </div>
+          ) : mode !== 'idb' ? (
             <div
               className={`fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 text-xs text-center ${
                 mode === 'memory' ? 'bg-danger text-white' : 'bg-primary text-on-primary'
@@ -98,7 +103,7 @@ export default function App() {
                 ? '存储不可用：数据仅保存在内存中，关闭页面即丢失，请导出备份'
                 : 'IndexedDB 不可用（可能处于私密模式），已降级为本地存储，建议尽快导出或云备份'}
             </div>
-          )}
+          ) : null}
 
           {updateReady && (
             <div className="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 bg-toast-bg text-toast-ink text-xs flex items-center justify-between gap-2">

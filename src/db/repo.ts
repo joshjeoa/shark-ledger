@@ -28,6 +28,8 @@ class Repo {
   mode: StorageMode = 'memory';
   data: DBData = emptyData();
   onChange: (() => void) | null = null;
+  /** 最近一次持久化写入是否失败（配额满/存储损坏）。UI 顶部横幅据此提醒用户立即导出。 */
+  writeFailed = false;
 
   private db?: IDBPDatabase;
   private saveTimer?: ReturnType<typeof setTimeout>;
@@ -91,11 +93,17 @@ class Repo {
     });
   }
 
-  /** 从持久层重新加载（多标签页/回前台场景） */
+  /** 从持久层重新加载（多标签页/回前台场景）。meta 一并刷新，避免 syncConfig 等跨标签页读到旧值 */
   async reload(): Promise<void> {
     if (this.mode === 'idb' && this.db) {
       const d = this.data as unknown as Record<StoreName, unknown[]>;
       for (const s of STORES) d[s] = await this.db.getAll(s);
+      const keys = await this.db.getAllKeys('meta');
+      const vals = await this.db.getAll('meta');
+      this.data.meta = {};
+      keys.forEach((k, i) => {
+        this.data.meta[String(k)] = vals[i];
+      });
     } else if (this.mode === 'local') {
       try {
         const raw = localStorage.getItem(LS_KEY);
@@ -111,6 +119,12 @@ class Repo {
     this.onChange?.();
   }
 
+  /** 写操作收尾：广播到其他标签页并通知本页 UI（所有数据变更统一走这里，避免遗漏） */
+  private commit(): void {
+    this.bc?.postMessage('changed');
+    this.notify();
+  }
+
   // ---------- 持久化 ----------
   private scheduleSave(): void {
     if (this.mode !== 'local') return;
@@ -118,8 +132,10 @@ class Repo {
     this.saveTimer = setTimeout(() => {
       try {
         localStorage.setItem(LS_KEY, JSON.stringify(this.data));
+        this.writeFailed = false;
       } catch {
-        /* 配额满：上层通过 toast 提示导出 */
+        this.writeFailed = true;
+        this.notify(); // 落盘失败需让 UI 立刻感知，而非等下次写操作
       }
     }, 200);
   }
@@ -128,8 +144,9 @@ class Repo {
     if (this.db) {
       try {
         await this.db.put(store, val);
+        this.writeFailed = false;
       } catch {
-        /* ignore */
+        this.writeFailed = true; // 缓存已更新但未落盘：界面"看似成功"，需横幅提醒导出
       }
     } else this.scheduleSave();
   }
@@ -138,8 +155,9 @@ class Repo {
     if (this.db) {
       try {
         await this.db.delete(store, key);
+        this.writeFailed = false;
       } catch {
-        /* ignore */
+        this.writeFailed = true;
       }
     } else this.scheduleSave();
   }
@@ -147,22 +165,27 @@ class Repo {
   /** 全量落盘（种子/恢复/导入用） */
   async persistAll(): Promise<void> {
     if (this.db) {
-      const tx = this.db.transaction(STORES as unknown as StoreName[], 'readwrite');
-      for (const s of STORES) {
-        tx.objectStore(s).clear();
-        for (const item of this.data[s] as { id?: string; yearMonth?: string }[]) {
-          tx.objectStore(s).put(item);
+      try {
+        const tx = this.db.transaction(STORES as unknown as StoreName[], 'readwrite');
+        for (const s of STORES) {
+          tx.objectStore(s).clear();
+          for (const item of this.data[s] as { id?: string; yearMonth?: string }[]) {
+            tx.objectStore(s).put(item);
+          }
         }
+        await tx.done;
+        const mtx = this.db.transaction('meta', 'readwrite');
+        mtx.objectStore('meta').clear();
+        for (const [k, v] of Object.entries(this.data.meta)) mtx.objectStore('meta').put(v, k);
+        await mtx.done;
+        this.writeFailed = false;
+      } catch {
+        this.writeFailed = true;
       }
-      await tx.done;
-      const mtx = this.db.transaction('meta', 'readwrite');
-      mtx.objectStore('meta').clear();
-      for (const [k, v] of Object.entries(this.data.meta)) mtx.objectStore('meta').put(v, k);
-      await mtx.done;
     } else if (this.mode === 'local') {
       this.scheduleSave();
     }
-    this.bc?.postMessage('changed');
+    this.commit();
   }
 
   private async flush(): Promise<void> {
@@ -170,8 +193,9 @@ class Repo {
       clearTimeout(this.saveTimer);
       try {
         localStorage.setItem(LS_KEY, JSON.stringify(this.data));
+        this.writeFailed = false;
       } catch {
-        /* ignore */
+        this.writeFailed = true;
       }
     }
   }
@@ -182,8 +206,9 @@ class Repo {
     if (this.db) {
       try {
         await this.db.put('meta', value, key);
+        this.writeFailed = false;
       } catch {
-        /* ignore */
+        this.writeFailed = true;
       }
     } else this.scheduleSave();
   }
@@ -198,8 +223,7 @@ class Repo {
     if (i >= 0) this.data.bills[i] = bill;
     else this.data.bills.push(bill);
     await this.putStore('bills', bill);
-    this.bc?.postMessage('changed');
-    this.notify();
+    this.commit();
   }
 
   private purgeBill(id: string): void {
@@ -215,8 +239,7 @@ class Repo {
       await this.upsertBill(updated);
     } else {
       this.purgeBill(id);
-      this.bc?.postMessage('changed');
-      this.notify();
+      this.commit();
     }
   }
 
@@ -232,14 +255,14 @@ class Repo {
     if (i >= 0) this.data.categories[i] = c;
     else this.data.categories.push(c);
     await this.putStore('categories', c);
-    this.notify();
+    this.commit();
   }
 
   async deleteCategory(id: string): Promise<boolean> {
     if (this.data.bills.some((b) => b.categoryId === id && !b.deletedAt)) return false;
     this.data.categories = this.data.categories.filter((c) => c.id !== id);
     await this.delStore('categories', id);
-    this.notify();
+    this.commit();
     return true;
   }
 
@@ -248,14 +271,14 @@ class Repo {
     if (i >= 0) this.data.accounts[i] = a;
     else this.data.accounts.push(a);
     await this.putStore('accounts', a);
-    this.notify();
+    this.commit();
   }
 
   async deleteAccount(id: string): Promise<boolean> {
     if (this.data.bills.some((b) => b.accountId === id && !b.deletedAt)) return false;
     this.data.accounts = this.data.accounts.filter((a) => a.id !== id);
     await this.delStore('accounts', id);
-    this.notify();
+    this.commit();
     return true;
   }
 
@@ -264,7 +287,7 @@ class Repo {
     if (i >= 0) this.data.ledgers[i] = l;
     else this.data.ledgers.push(l);
     await this.putStore('ledgers', l);
-    this.notify();
+    this.commit();
   }
 
   async setBudget(yearMonth: string, amountCents: number | null): Promise<void> {
@@ -281,7 +304,7 @@ class Repo {
       this.data.budgets.push(budget);
       await this.putStore('budgets', budget);
     } else this.scheduleSave();
-    this.notify();
+    this.commit();
   }
 
   // ---------- 导出 / 恢复 ----------
@@ -307,8 +330,7 @@ class Repo {
     this.data.tags = next.tags;
     this.data.ledgers = next.ledgers.length ? next.ledgers : this.data.ledgers;
     this.data.budgets = next.budgets;
-    await this.persistAll();
-    this.notify();
+    await this.persistAll(); // 内部已 commit()：广播 + 通知
   }
 }
 

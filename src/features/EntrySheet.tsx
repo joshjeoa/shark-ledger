@@ -5,7 +5,7 @@ import { CatIcon } from '../utils/iconMap';
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
 import { useUI } from '../store/ui';
-import { parseYuanToCents } from '../utils/money';
+import { parseYuanToCents, toYuanTrim } from '../utils/money';
 import { dayKey } from '../utils/date';
 import type { BillType } from '../types';
 
@@ -29,7 +29,7 @@ export function EntrySheet() {
     if (!open) return;
     if (editing) {
       setType(editing.type);
-      setAmount((editing.amountCents / 100).toFixed(2).replace(/\.?0+$/, ''));
+      setAmount(toYuanTrim(editing.amountCents));
       setCategoryId(editing.categoryId);
       setAccountId(editing.accountId ?? '');
       setNote(editing.note);

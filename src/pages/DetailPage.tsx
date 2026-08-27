@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, ChevronDown, Eye, EyeOff, Search, X } from 'lucide-react';
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
@@ -10,7 +10,7 @@ import { MonthPicker } from '../components/MonthPicker';
 import { EmptyState } from '../components/EmptyState';
 import { SyncChip } from '../components/SyncChip';
 import { Sheet } from '../components/Sheet';
-import type { Bill } from '../types';
+import type { Bill, Category } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export function DetailPage() {
@@ -35,6 +35,9 @@ export function DetailPage() {
     [bills, currentLedgerId, month],
   );
 
+  // 分类 id → 对象索引，避免过滤/渲染时对每条账单做线性 find
+  const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
   const sums = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -49,10 +52,10 @@ export function DetailPage() {
     const q = query.trim();
     if (!q) return monthBills;
     return monthBills.filter((b) => {
-      const cat = categories.find((c) => c.id === b.categoryId);
+      const cat = catMap.get(b.categoryId);
       return b.note.includes(q) || (cat?.name ?? '').includes(q) || toYuan(b.amountCents).startsWith(q);
     });
-  }, [monthBills, query, categories]);
+  }, [monthBills, query, catMap]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Bill[]>();
@@ -65,12 +68,17 @@ export function DetailPage() {
     return Array.from(map.entries());
   }, [filtered]);
 
-  const onDelete = async (b: Bill) => {
-    const ok = await confirm({ title: '删除这笔记录？', message: '删除后 30 天内可在 设置→数据恢复 中找回', confirmText: '删除', danger: true });
-    if (!ok) return;
-    await removeBill(b.id);
-    toast('已删除');
-  };
+  // 稳定回调：配合 memo(BillRow)，让搜索输入等父组件重渲不再逐行重渲账单列表
+  const onTap = useCallback((b: Bill) => openEntry(b), [openEntry]);
+  const onDelete = useCallback(
+    async (b: Bill) => {
+      const ok = await confirm({ title: '删除这笔记录？', message: '删除后 30 天内可在 设置→数据恢复 中找回', confirmText: '删除', danger: true });
+      if (!ok) return;
+      await removeBill(b.id);
+      toast('已删除');
+    },
+    [confirm, removeBill, toast],
+  );
 
   const curLedger = ledgers.find((l) => l.id === currentLedgerId);
 
@@ -157,7 +165,7 @@ export function DetailPage() {
                 </div>
                 <div className="bg-card">
                   {items.map((b) => (
-                    <BillRow key={b.id} bill={b} hide={hide} color={settings.colorAmounts} onTap={() => openEntry(b)} onDelete={() => void onDelete(b)} catName={categories.find((c) => c.id === b.categoryId)} />
+                    <BillRow key={b.id} bill={b} hide={hide} color={settings.colorAmounts} onTap={onTap} onDelete={onDelete} cat={catMap.get(b.categoryId)} />
                   ))}
                 </div>
               </section>
@@ -191,19 +199,36 @@ export function DetailPage() {
   );
 }
 
-function BillRow({ bill, hide, color, onTap, onDelete, catName }: { bill: Bill; hide: boolean; color: boolean; onTap: () => void; onDelete: () => void; catName?: { name: string; icon: string } }) {
+const BillRow = memo(function BillRow({
+  bill,
+  hide,
+  color,
+  onTap,
+  onDelete,
+  cat,
+}: {
+  bill: Bill;
+  hide: boolean;
+  color: boolean;
+  onTap: (b: Bill) => void;
+  onDelete: (b: Bill) => void | Promise<void>;
+  cat?: Category;
+}) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
   const start = () => {
     fired.current = false;
     timer.current = setTimeout(() => {
       fired.current = true;
-      onDelete();
+      void onDelete(bill);
     }, 500);
   };
   const stop = () => {
     if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
   };
+  // 卸载时清掉未触发的长按计时器：切月/同步刷新导致行消失时不再误弹删除确认
+  useEffect(() => stop, []);
   const amountColor = color ? (bill.type === 'expense' ? 'text-danger' : 'text-success') : 'text-ink';
   return (
     <div
@@ -211,19 +236,20 @@ function BillRow({ bill, hide, color, onTap, onDelete, catName }: { bill: Bill; 
       onTouchStart={start}
       onTouchEnd={stop}
       onTouchMove={stop}
+      onTouchCancel={stop}
       onClick={() => {
         if (fired.current) {
           fired.current = false;
           return;
         }
-        onTap();
+        onTap(bill);
       }}
     >
       <span className="w-10 h-10 rounded-full bg-fill flex items-center justify-center text-ink-2">
-        <CatIcon name={catName?.icon ?? ''} className="w-5 h-5" />
+        <CatIcon name={cat?.icon ?? ''} className="w-5 h-5" />
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-ink truncate">{catName?.name ?? '未分类'}</p>
+        <p className="text-sm text-ink truncate">{cat?.name ?? '未分类'}</p>
         {bill.note && <p className="text-xs text-ink-3 truncate">{bill.note}</p>}
       </div>
       <span className={`text-base font-medium ${amountColor}`}>
@@ -232,4 +258,4 @@ function BillRow({ bill, hide, color, onTap, onDelete, catName }: { bill: Bill; 
       </span>
     </div>
   );
-}
+});
