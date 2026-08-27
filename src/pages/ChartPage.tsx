@@ -108,8 +108,15 @@ export function ChartPage() {
     let cancelled = false;
     void import('chart.js/auto').then(({ default: Chart }) => {
       if (cancelled || !canvasRef.current) return;
-      const ink = cssVar('--ink');
       const ink3 = cssVar('--ink-3');
+      const primary = cssVar('--primary');
+      // 主色渐变填充：从图表顶部 30% 透明度渐隐到底部全透明（hex 追加 alpha）
+      const ctx = canvasRef.current.getContext('2d');
+      const grad = ctx?.createLinearGradient(0, 0, 0, 260);
+      if (grad) {
+        grad.addColorStop(0, `${primary}4d`);
+        grad.addColorStop(1, `${primary}00`);
+      }
       chart = new Chart(canvasRef.current, {
         type: 'line',
         data: {
@@ -117,12 +124,16 @@ export function ChartPage() {
           datasets: [
             {
               data: model.buckets.map((c) => c / 100),
-              borderColor: ink,
-              backgroundColor: cssVar('--primary'),
+              borderColor: primary,
+              backgroundColor: grad ?? primary,
+              fill: true,
               pointRadius: 3,
-              pointBackgroundColor: cssVar('--primary'),
-              tension: 0,
-              borderWidth: 1.5,
+              pointHoverRadius: 5,
+              pointBackgroundColor: primary,
+              pointBorderColor: cssVar('--card'),
+              pointBorderWidth: 1.5,
+              tension: 0.35,
+              borderWidth: 2,
             },
             {
               data: model.labels.map(() => model.avg / 100),
@@ -136,10 +147,11 @@ export function ChartPage() {
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `¥${(ctx.parsed.y ?? 0).toFixed(2)}` } } },
           scales: {
             x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: ink3 } },
-            y: { beginAtZero: true, ticks: { font: { size: 10 }, color: ink3 } },
+            y: { beginAtZero: true, ticks: { font: { size: 10 }, color: ink3 }, border: { display: false }, grid: { color: cssVar('--line') } },
           },
         },
       });

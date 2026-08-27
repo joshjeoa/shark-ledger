@@ -76,6 +76,14 @@ export function DiscoverPage() {
   const over = budget ? used > budget.amountCents : false;
   const C = 2 * Math.PI * 52;
 
+  // 预算环入场动画：首帧 0，下一帧过渡到目标比例（CSS transition 驱动）
+  const [ringOn, setRingOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setRingOn(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+  const dash = `${(ringOn ? pct : 0) * C} ${C}`;
+
   const show = (c: number) => (hide ? '****' : toYuan(c));
 
   const saveBudget = async () => {
@@ -148,7 +156,8 @@ export function DiscoverPage() {
                     stroke={over ? 'var(--danger)' : 'var(--primary)'}
                     strokeWidth="10"
                     strokeLinecap="round"
-                    strokeDasharray={`${pct * C} ${C}`}
+                    strokeDasharray={dash}
+                    style={{ transition: 'stroke-dasharray 0.8s ease' }}
                   />
                 </svg>
                 <span className={`absolute inset-0 flex items-center justify-center text-sm ${over ? 'text-danger' : 'text-ink-2'}`}>

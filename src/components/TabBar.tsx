@@ -22,7 +22,7 @@ export function TabBar() {
         <div className="flex justify-center">
           <button
             aria-label="记一笔"
-            className="w-14 h-14 -mt-6 rounded-full bg-primary shadow-lg flex items-center justify-center text-on-primary active:scale-95 transition-transform"
+            className="w-14 h-14 -mt-6 rounded-full text-on-primary flex items-center justify-center active:scale-95 transition-transform tab-fab"
             onClick={() => openEntry(null)}
           >
             <Plus size={28} strokeWidth={2.4} />

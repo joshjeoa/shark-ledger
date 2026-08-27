@@ -151,3 +151,26 @@ body {
 .fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+/* 空状态入场：淡入 + 轻微上移 */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fade-up 0.35s ease-out;
+}
+
+/* TabBar 中央记一笔按钮：品牌色渐变 + 浮起阴影（hex 叠加法生成渐变，兼容 iOS 15） */
+.tab-fab {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 55%), var(--primary);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.22),
+    0 1px 3px rgba(0, 0, 0, 0.15);
+}

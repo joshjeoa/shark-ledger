@@ -249,6 +249,25 @@ class Repo {
     await this.upsertBill({ ...b, deletedAt: undefined, updatedAt: Date.now() });
   }
 
+  /** 批量插入（演示数据/恢复用）：合并去重后单事务落盘，只通知一次 */
+  async insertBills(bills: Bill[]): Promise<void> {
+    if (bills.length === 0) return;
+    const map = new Map(this.data.bills.map((b) => [b.id, b]));
+    for (const b of bills) map.set(b.id, b);
+    this.data.bills = [...map.values()];
+    if (this.db) {
+      try {
+        const tx = this.db.transaction('bills', 'readwrite');
+        for (const b of bills) tx.objectStore('bills').put(b);
+        await tx.done;
+        this.writeFailed = false;
+      } catch {
+        this.writeFailed = true;
+      }
+    } else this.scheduleSave();
+    this.commit();
+  }
+
   // ---------- 其他表 ----------
   async upsertCategory(c: Category): Promise<void> {
     const i = this.data.categories.findIndex((x) => x.id === c.id);
