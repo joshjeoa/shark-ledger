@@ -71,13 +71,18 @@ export function DetailPage() {
 
   const groups = useMemo(() => {
     const map = new Map<string, Bill[]>();
-    for (const b of [...filtered].sort((a, b) => b.occurredAt - a.occurredAt)) {
+    for (const b of filtered) {
       const k = dayKey(b.occurredAt);
       const arr = map.get(k);
       if (arr) arr.push(b);
       else map.set(k, [b]);
     }
-    return Array.from(map.entries());
+    // 组内：按记账先后倒序（后记的在上）；同毫秒再按账单时间倒序
+    for (const arr of map.values()) {
+      arr.sort((a, b) => b.createdAt - a.createdAt || b.occurredAt - a.occurredAt);
+    }
+    // 分组：按日期倒序（今天在上，昨天在下）
+    return Array.from(map.entries()).sort((a, b) => (a[0] > b[0] ? -1 : 1));
   }, [filtered]);
 
   // 稳定回调：配合 memo(BillRow)，让搜索输入等父组件重渲不再逐行重渲账单列表

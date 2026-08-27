@@ -78,10 +78,8 @@ export function EntrySheet() {
       close();
     } else {
       await addBill(payload);
-      // 连续记账：面板不关，只清金额与备注，分类/账户/日期保留，减少重复操作
-      setAmount('');
-      setNote('');
-      toast('已记一笔，可继续记录');
+      toast('已记一笔');
+      close();
     }
   };
 
