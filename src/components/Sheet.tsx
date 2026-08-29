@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -10,6 +10,26 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   useEffect(() => {
     onCloseRef.current = onClose;
   });
+
+  // iOS 键盘悬浮覆盖底部：自己把面板抬到键盘上方，输入框保持可见，
+  // iOS 就不会平移整个视口（平移 + 滚动回锁的对抗正是弹出键盘时的闪烁来源）
+  const [kbOffset, setKbOffset] = useState(0);
+  useEffect(() => {
+    if (!open) {
+      setKbOffset(0);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const kb = window.innerHeight - vv.height;
+      // 阈值防误判：工具栏收展等小幅高度变化（~60px）不当成键盘
+      setKbOffset(kb > 120 ? kb : 0);
+    };
+    onResize();
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, [open]);
 
   // 打开时聚焦面板、关闭时把焦点归还给触发元素
   useEffect(() => {
@@ -59,8 +79,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl sheet-up overflow-auto pb-safe outline-none"
-        style={{ maxHeight: '85%' }}
+        className="absolute left-0 right-0 bg-card rounded-t-2xl sheet-up overflow-auto pb-safe outline-none"
+        style={{ maxHeight: `calc(85% - ${kbOffset}px)`, bottom: kbOffset }}
       >
         <div className="flex items-center justify-between px-4 pt-4 pb-2 sticky top-0 bg-card rounded-t-2xl">
           <h3 className="font-semibold text-base">{title ?? ''}</h3>

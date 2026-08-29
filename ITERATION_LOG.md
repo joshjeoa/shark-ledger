@@ -38,6 +38,7 @@
 - 🐛 **修复 (Fixed):**
   - **记一笔 FAB 渲染卡顿**：玻璃栏容器误加 `overflow-hidden`，上探出栏体的 FAB 上半截被裁切区包住，叠加磨砂区域每帧重绘导致按压动画掉帧；移除裁切（内容本不溢出）+ `.tab-fab` 提升 `will-change: transform` / `translateZ(0)` 独立合成层，缩放动画走 GPU 合成不再重绘
   - **iOS 输入自动放大页面**：iOS Safari 聚焦 font-size < 16px 的输入框会强制缩放（日期/备注/邮箱/搜索框均为 14px，iPhone 记账一点输入就放大）；`@supports (-webkit-touch-callout: none)` 仅 iOS 下输入类元素统一 16px，其他平台保留原字号，捏合缩放不受影响
+  - **呼出键盘时页面闪烁**：输入框被键盘遮挡 → iOS 平移整个视口 → 滚动锁又拽回来，一推一拉产生闪烁。改为 Sheet 面板自己抬到键盘上方（监听 `visualViewport.resize`，键盘高度 >120px 阈值时面板 bottom = 键盘高度、maxHeight 同步收缩），输入框始终可见，iOS 不再平移视口；ConfirmSheet/预算弹层等所有 Sheet 通用受益
 
 ### 🎯 待办与下一步 (TODO)
 - [ ] 账号通道用户侧收尾：设置数据口令 + 再次同步使云端密文化
