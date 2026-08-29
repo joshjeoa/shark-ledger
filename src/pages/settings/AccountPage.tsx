@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CloudUpload, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
+import { CloudUpload, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
 import { SettingsShell } from './SettingsShell';
 import { useUI } from '../../store/ui';
 import {
@@ -221,13 +221,11 @@ export function AccountPage() {
             )}
             <label className="block">
               <span className="text-xs text-ink-3 mb-1 block">{mode === 'recovery' ? '新密码' : '密码'}</span>
-              <input
-                type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              <PassInput
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 placeholder={mode === 'forgot' ? '（此页不需要输入密码）' : '至少 8 位'}
-                className="w-full h-11 px-3 rounded-xl bg-fill text-ink text-sm outline-none"
               />
             </label>
             <button disabled={busy} className="w-full h-11 rounded-xl bg-primary text-on-primary font-medium disabled:opacity-60 flex items-center justify-center gap-2" onClick={() => void submitAuth()}>
@@ -275,13 +273,11 @@ export function AccountPage() {
             </p>
             <label className="block">
               <span className="text-xs text-ink-3 mb-1 block">数据口令（加密云端快照；仅保存在本设备，换设备登录后需重新输入）</span>
-              <input
-                type="password"
-                autoComplete="off"
+              <PassInput
                 value={vaultPass}
-                onChange={(e) => setVaultPassState(e.target.value)}
+                onChange={setVaultPassState}
+                autoComplete="off"
                 placeholder="留空则不加密上传（不推荐）"
-                className="w-full h-11 px-3 rounded-xl bg-fill text-ink text-sm outline-none"
               />
             </label>
             <button disabled={busy} className="w-full h-10 rounded-xl bg-fill text-sm text-ink-2 flex items-center justify-center gap-2" onClick={() => void savePass()}>
@@ -319,8 +315,37 @@ export function AccountPage() {
   );
 }
 
-function UnconfiguredGuide() {
+/** 密码输入框：带显示/隐藏切换（注册时方便核对输入是否正确） */
+function PassInput({ value, onChange, autoComplete, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete: string;
+  placeholder?: string;
+}) {
+  const [show, setShow] = useState(false);
   return (
+    <div className="relative">
+      <input
+        type={show ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-11 pl-3 pr-11 rounded-xl bg-fill text-ink text-sm outline-none"
+      />
+      <button
+        type="button"
+        aria-label={show ? '隐藏密码' : '显示密码'}
+        className="absolute right-0 top-0 h-11 px-3 text-ink-3 flex items-center no-callout"
+        onClick={() => setShow((v) => !v)}
+      >
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
+
+function UnconfiguredGuide() {  return (
     <div className="px-3 pt-3">
       <div className="bg-card rounded-2xl p-4 space-y-2">
         <h2 className="text-sm font-medium">账号同步尚未配置</h2>
