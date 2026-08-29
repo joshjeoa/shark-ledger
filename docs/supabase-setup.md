@@ -18,7 +18,7 @@
 2. 左侧 **SQL Editor** → New query → 粘贴以下语句 → Run：
 
 ```sql
--- 用户级加密快照表：每个登录用户一行
+-- 用户级加密快照表：每个登录用户一行（可重复执行：先删旧策略再建）
 create table if not exists public.vaults (
   user_id     uuid primary key references auth.users (id) on delete cascade,
   cipher      text        not null,                -- 加密后的整库快照 JSON
@@ -28,12 +28,16 @@ create table if not exists public.vaults (
 
 alter table public.vaults enable row level security;
 
+drop policy if exists "vault_select_own" on public.vaults;
 create policy "vault_select_own" on public.vaults
   for select using (auth.uid() = user_id);
+drop policy if exists "vault_insert_own" on public.vaults;
 create policy "vault_insert_own" on public.vaults
   for insert with check (auth.uid() = user_id);
+drop policy if exists "vault_update_own" on public.vaults;
 create policy "vault_update_own" on public.vaults
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "vault_delete_own" on public.vaults;
 create policy "vault_delete_own" on public.vaults
   for delete using (auth.uid() = user_id);
 ```
