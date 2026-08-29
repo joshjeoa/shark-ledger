@@ -25,6 +25,7 @@ const AccountsPage = lazy(() => import('./pages/settings/AccountsPage').then((m)
 const LedgersPage = lazy(() => import('./pages/settings/LedgersPage').then((m) => ({ default: m.LedgersPage })));
 const DataPage = lazy(() => import('./pages/settings/DataPage').then((m) => ({ default: m.DataPage })));
 const BackupPage = lazy(() => import('./pages/settings/BackupPage').then((m) => ({ default: m.BackupPage })));
+const AccountPage = lazy(() => import('./pages/settings/AccountPage').then((m) => ({ default: m.AccountPage })));
 const AboutPage = lazy(() => import('./pages/settings/AboutPage').then((m) => ({ default: m.AboutPage })));
 
 /** PWA 更新提示：SW 检测到新版本时弹横幅，用户确认后刷新 */
@@ -56,6 +57,8 @@ export default function App() {
     setupAppHeight();
     void useData.getState().init();
     setupSyncLifecycle();
+    // 账号同步生命周期（登录事件/网络恢复补跑）按需加载：未配置 Supabase 时不进主包
+    void import('./sync/account').then((m) => m.setupAccountLifecycle());
     refreshSyncUI();
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
@@ -138,6 +141,7 @@ export default function App() {
               <Route path="/settings/ledgers" element={<LedgersPage />} />
               <Route path="/settings/data" element={<DataPage />} />
               <Route path="/settings/backup" element={<BackupPage />} />
+              <Route path="/settings/account" element={<AccountPage />} />
               <Route path="/settings/about" element={<AboutPage />} />
               <Route path="*" element={<DetailPage />} />
               </Routes>

@@ -1,10 +1,11 @@
 ﻿import { useState } from 'react';
-import { ChevronRight, Palette, Eye, EyeOff, Wallet2, Tags, BookOpenText, CloudUpload, Database, Info, Sun, Moon, MonitorSmartphone } from 'lucide-react';
+import { ChevronRight, Palette, Eye, EyeOff, Wallet2, Tags, BookOpenText, CloudUpload, Database, Info, Sun, Moon, MonitorSmartphone, UserRound } from 'lucide-react';
 import { SettingsShell, Toggle } from './SettingsShell';
 import { useSettings, THEME_PRESETS } from '../../store/settings';
 import type { Appearance } from '../../utils/theme';
 import { useNavigate } from 'react-router-dom';
 import { Sheet } from '../../components/Sheet';
+import { isAccountConfigured } from '../../sync/account';
 
 const APPEARANCES: { value: Appearance; label: string; icon: typeof Sun }[] = [
   { value: 'auto', label: '跟随系统', icon: MonitorSmartphone },
@@ -81,6 +82,7 @@ export function SettingsHome() {
         </div>
 
         <div className="bg-card rounded-2xl divide-y divide-line">
+          {isAccountConfigured() && <Item label="账号与云同步" icon={<UserRound size={18} className="text-ink-3" />} onClick={() => navigate('/settings/account')} />}
           <Item label="分类设置" icon={<Tags size={18} className="text-ink-3" />} onClick={() => navigate('/settings/categories')} />
           <Item label="收支账户" icon={<Wallet2 size={18} className="text-ink-3" />} onClick={() => navigate('/settings/accounts')} />
           <Item label="我的账本" icon={<BookOpenText size={18} className="text-ink-3" />} onClick={() => navigate('/settings/ledgers')} />

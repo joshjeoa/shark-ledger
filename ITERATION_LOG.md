@@ -4,6 +4,40 @@
 
 ---
 
+## [v1.5.0 - 2026-08-29] - 账号模式：Supabase 邮箱认证 + 加密云保险库同步
+
+### 📝 更新详情
+- ✨ **新增 (Added):**
+  - **账号认证**（`src/sync/account.ts`）：邮箱+密码注册/登录/找回密码/设置新密码，走 Supabase Auth（GoTrue）——密码散列存服务端，应用与数据库均不接触明文；会话持久化 + token 自动刷新 + 跨标签页广播；认证错误映射为中文（「邮箱或密码错误」「该邮箱已注册」等，不泄露服务端细节）
+  - **云端保险库**（`vaults` 表，每用户一行）：同步 = 拉取云端 → 与本机按 id 并集、同 id 取 `updatedAt` 大者合并 → 推回，两端数据都不会被静默覆盖；本地零账单的新设备登录时直接采用云端整库（避免种子分类与云端重复）
+  - **数据口令零信任加密**：上传前用口令做 PBKDF2-SHA256（60 万轮）+ AES-256-GCM 客户端加密，Supabase 只存密文；口令仅存本设备（换设备需重新输入），复用 `crypto.ts` 会话密钥缓存
+  - **AccountPage**（懒加载路由 `/settings/account`）：登录/注册分段、忘记密码、找回密码后设新密码、已登录面板（数据口令管理/立即同步/上次同步时间与失败原因/退出登录/删除云端数据）；设置页入口仅在配置 Supabase 后出现
+  - **自动同步时机**：登录成功即同步一次；记一笔后 5s 防抖（复用 `scheduleSync` 入口）；网络恢复补跑；并发互斥 + 迟到触发补跑
+  - **配置开关**：`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` 构建期注入，两者齐备才启用；未配置时入口隐藏、代码按需加载，行为与 v1.4.0 完全一致
+  - `docs/supabase-setup.md`：建表 SQL + RLS 策略 + Site URL/Secrets 配置 + 故障排查
+- ♻️ **优化 (Changed):**
+  - **包体**：supabase-js（218KB/gzip 58KB）拆独立 `supabase-*` chunk 并移出 SW 预缓存（同 chart.js 策略，首装预缓存从 566KB 压回 354KB）；`account.ts`（5KB）改为 manager/App 动态引入——不用账号功能的用户主包仅 +0.5KB（93.5KB/gzip 31.2KB）；AccountPage 本身 10KB 懒加载
+  - `deploy.yml` 构建步骤注入 `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` Secrets
+- 📌 **设计决策 (Decisions):**
+  - 纯前端无后端的"本地账号"是伪安全，因此选择 Supabase 做真认证（服务端散列 + RLS 行级隔离）；安全边界在 RLS 而非 anon key 保密（anon key 本就是公开密钥）
+  - 合并策略沿用现有 `mergeDumps` 语义（union + updatedAt 胜出），不做服务端冲突分支——数据量级下整库快照最简单且无丢失风险
+  - 凭证照片不参与账号云同步（体积原因，仅存本机），账号页有明确提示
+- ✅ **验证 (Verified):**
+  - 未配置路径：设置页入口隐藏、直连 `/settings/account` 显示配置引导卡片，功能休眠不影响现有数据
+  - 配置态（假项目地址）：入口出现、登录表单渲染、邮箱格式校验（请输入正确的邮箱地址）、密码长度校验（密码至少 8 位）、真实 supabase 客户端请求失败映射（网络连接失败，请检查网络）全链路通过
+  - 真机注册/登录需按 `docs/supabase-setup.md` 建项目后验证（免费额度即可）
+  - `tsc --noEmit` strict 通过
+
+### 🎯 待办与下一步 (TODO)
+- [ ] **自动同步仍是单向整文件覆盖（Gist/WebDAV 通道）**：双设备先后 push 会静默覆盖对方较新快照；账号通道已用合并策略解决，Gist/WebDAV 计划引入 pull → `mergeDumps` → push 或 `exportedAt` 冲突检测
+- [ ] 账号通道端到端真机验证（需用户创建 Supabase 项目并配置 Secrets）
+- [ ] 引入 vitest：`mergeDumps`/`validateDump`/`compressImage` 补单元测试
+- [ ] bills 的 `byUpdated` 索引从未被查询（增量同步预留），确认用或删
+- [ ] `FullDump` 不含 settings（规格 §5.6），涉及导入恢复语义，独立任务
+- [ ] README Roadmap：标签系统、多币种、周期记账、资产管家
+
+---
+
 ## [v1.4.0 - 2026-08-29] - 记一笔支持凭证照片
 
 ### 📝 更新详情

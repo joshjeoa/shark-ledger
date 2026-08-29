@@ -38,12 +38,15 @@ export function refreshSyncUI(): void {
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-/** 写操作后 5s 防抖自动同步 */
+/** 写操作后 5s 防抖自动同步（Gist/WebDAV 备份 + 登录用户的云端保险库） */
 export function scheduleSync(): void {
   const cfg = getSyncConfig();
-  if (!cfg?.enabled) return;
-  clearTimeout(timer);
-  timer = setTimeout(() => void doSync(), 5000);
+  if (cfg?.enabled) {
+    clearTimeout(timer);
+    timer = setTimeout(() => void doSync(), 5000);
+  }
+  // 账号同步按需加载：未配置 Supabase 的用户不下载这段代码
+  void import('./account').then((m) => m.scheduleVaultSync());
 }
 
 function deviceId(): string {
