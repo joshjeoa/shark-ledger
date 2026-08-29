@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Delete } from 'lucide-react';
 
-/** 自绘数字键盘：不唤起系统键盘，连点/非法输入安全；退格长按连删 */
-export function NumberKeyboard({ value, onChange }: { value: string; onChange: Dispatch<SetStateAction<string>> }) {
+/** 自绘数字键盘：不唤起系统键盘，连点/非法输入安全；退格长按连删。
+ * memo：父面板内备注/日期等其它 state 变化时不再重渲整个键盘。 */
+export const NumberKeyboard = memo(function NumberKeyboard({ value, onChange }: { value: string; onChange: Dispatch<SetStateAction<string>> }) {
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const repeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -52,6 +53,7 @@ export function NumberKeyboard({ value, onChange }: { value: string; onChange: D
         <button
           key={k}
           className="h-12 bg-card text-ink text-lg font-medium active:bg-fill flex items-center justify-center select-none"
+          aria-label={k === 'back' ? '退格' : undefined}
           onPointerDown={k === 'back' ? backspaceStart : undefined}
           onClick={() => {
             stopRepeat();
@@ -64,4 +66,4 @@ export function NumberKeyboard({ value, onChange }: { value: string; onChange: D
       ))}
     </div>
   );
-}
+});

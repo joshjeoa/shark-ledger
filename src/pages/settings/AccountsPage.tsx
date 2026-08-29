@@ -8,7 +8,9 @@ import { uuid } from '../../utils/compat';
 import type { Account } from '../../types';
 
 export function AccountsPage() {
-  const { accounts, upsertAccount, deleteAccount } = useData();
+  const accounts = useData((s) => s.accounts);
+  const upsertAccount = useData((s) => s.upsertAccount);
+  const deleteAccount = useData((s) => s.deleteAccount);
   const toast = useUI((s) => s.toast);
   const confirm = useUI((s) => s.confirm);
   const [editing, setEditing] = useState<Account | null>(null);

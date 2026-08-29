@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Sheet } from '../components/Sheet';
 import { NumberKeyboard } from '../components/NumberKeyboard';
 import { CatIcon } from '../utils/iconMap';
@@ -7,15 +7,20 @@ import { useSettings } from '../store/settings';
 import { useUI } from '../store/ui';
 import { parseYuanToCents, toYuanTrim } from '../utils/money';
 import { dayKey } from '../utils/date';
-import type { BillType } from '../types';
+import type { Account, Category, BillType } from '../types';
 
 export function EntrySheet() {
   const open = useUI((s) => s.entryOpen);
   const editing = useUI((s) => s.editingBill);
   const close = useUI((s) => s.closeEntry);
   const toast = useUI((s) => s.toast);
-  const { categories, accounts, addBill, updateBill } = useData();
-  const settings = useSettings();
+  const categories = useData((s) => s.categories);
+  const accounts = useData((s) => s.accounts);
+  const addBill = useData((s) => s.addBill);
+  const updateBill = useData((s) => s.updateBill);
+  const defaultType = useSettings((s) => s.defaultType);
+  const lastCategory = useSettings((s) => s.lastCategory);
+  const setSettings = useSettings((s) => s.set);
 
   const [type, setType] = useState<BillType>('expense');
   const [amount, setAmount] = useState('');
@@ -35,10 +40,10 @@ export function EntrySheet() {
       setNote(editing.note);
       setDate(dayKey(editing.occurredAt));
     } else {
-      const t = settings.defaultType;
+      const t = defaultType;
       setType(t);
       setAmount('');
-      setCategoryId(settings.lastCategory[t] ?? '');
+      setCategoryId(lastCategory[t] ?? '');
       setAccountId('');
       setNote('');
       setDate(dayKey(Date.now()));
@@ -54,7 +59,7 @@ export function EntrySheet() {
 
   const switchType = (t: BillType) => {
     setType(t);
-    setCategoryId(settings.lastCategory[t] ?? '');
+    setCategoryId(lastCategory[t] ?? '');
   };
 
   const save = async () => {
@@ -70,17 +75,20 @@ export function EntrySheet() {
     const [y = 2026, m = 1, d = 1] = date.split('-').map(Number);
     const occurredAt = new Date(y, m - 1, d, 12, 0, 0).getTime();
     const payload = { type, amountCents: cents, categoryId, note: note.slice(0, 50), accountId: accountId || undefined, occurredAt };
-    settings.set({ lastCategory: { ...settings.lastCategory, [type]: categoryId } });
+    setSettings({ lastCategory: { ...lastCategory, [type]: categoryId } });
 
     if (editing) {
       await updateBill({ ...editing, ...payload });
-      toast('已更新');
-      close();
     } else {
       await addBill(payload);
-      toast('已记一笔');
-      close();
     }
+    // repo 吞掉 IDB 异常只置 writeFailed，promise 永不 reject：写失败时保留面板并提示
+    if (useData.getState().writeFailed) {
+      toast('保存失败，数据未持久化，请导出备份', 'err');
+      return;
+    }
+    toast(editing ? '已更新' : '已记一笔');
+    close();
   };
 
   return (
@@ -99,34 +107,11 @@ export function EntrySheet() {
           ))}
         </div>
 
-        {/* 分类网格 */}
-        <div className="grid grid-cols-4 gap-y-3 max-h-52 overflow-auto hide-scrollbar mb-3">
-          {cats.map((c) => (
-            <button key={c.id} className="flex flex-col items-center gap-1" onClick={() => setCategoryId(c.id)}>
-              <span
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  categoryId === c.id ? 'bg-primary text-on-primary ring-2 ring-primary ring-offset-2 ring-offset-card' : 'bg-fill text-ink-2'
-                }`}
-              >
-                <CatIcon name={c.icon} className="w-6 h-6" />
-              </span>
-              <span className={`text-xs ${categoryId === c.id ? 'text-ink font-medium' : 'text-ink-3'}`}>{c.name}</span>
-            </button>
-          ))}
-        </div>
+        {/* 分类网格：memo 化，金额键盘/备注输入时不重渲 */}
+        <CatGrid cats={cats} selected={categoryId} onSelect={setCategoryId} />
 
         {/* 账户 + 日期 + 备注 */}
-        <div className="flex gap-2 overflow-auto hide-scrollbar mb-2">
-          {accs.map((a) => (
-            <button
-              key={a.id}
-              className={`shrink-0 px-3 h-8 rounded-full text-xs ${accountId === a.id ? 'bg-primary text-on-primary font-medium' : 'bg-fill text-ink-2'}`}
-              onClick={() => setAccountId(accountId === a.id ? '' : a.id)}
-            >
-              {a.name}
-            </button>
-          ))}
-        </div>
+        <AccChips accs={accs} selected={accountId} onToggle={setAccountId} />
         <div className="flex gap-2 mb-2">
           <input
             type="date"
@@ -163,3 +148,38 @@ export function EntrySheet() {
     </Sheet>
   );
 }
+
+const CatGrid = memo(function CatGrid({ cats, selected, onSelect }: { cats: Category[]; selected: string; onSelect: (id: string) => void }) {
+  return (
+    <div className="grid grid-cols-4 gap-y-3 max-h-52 overflow-auto hide-scrollbar mb-3">
+      {cats.map((c) => (
+        <button key={c.id} className="flex flex-col items-center gap-1" onClick={() => onSelect(c.id)}>
+          <span
+            className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              selected === c.id ? 'bg-primary text-on-primary ring-2 ring-primary ring-offset-2 ring-offset-card' : 'bg-fill text-ink-2'
+            }`}
+          >
+            <CatIcon name={c.icon} className="w-6 h-6" />
+          </span>
+          <span className={`text-xs ${selected === c.id ? 'text-ink font-medium' : 'text-ink-3'}`}>{c.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+});
+
+const AccChips = memo(function AccChips({ accs, selected, onToggle }: { accs: Account[]; selected: string; onToggle: (id: string) => void }) {
+  return (
+    <div className="flex gap-2 overflow-auto hide-scrollbar mb-2">
+      {accs.map((a) => (
+        <button
+          key={a.id}
+          className={`shrink-0 px-3 h-8 rounded-full text-xs ${selected === a.id ? 'bg-primary text-on-primary font-medium' : 'bg-fill text-ink-2'}`}
+          onClick={() => onToggle(selected === a.id ? '' : a.id)}
+        >
+          {a.name}
+        </button>
+      ))}
+    </div>
+  );
+});

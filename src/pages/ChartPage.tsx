@@ -4,9 +4,11 @@ import { useSettings } from '../store/settings';
 import { useTheme } from '../utils/theme';
 import { dayKey, isoWeekNumber, monthKey, monthKeyOffset, monthLabelCN, shortMD, startOfWeek, daysInMonth } from '../utils/date';
 import { toYuan } from '../utils/money';
+import { ledgerBills } from '../utils/stats';
 import { CatIcon } from '../utils/iconMap';
 import { EmptyState } from '../components/EmptyState';
 import type { BillType } from '../types';
+import type { Chart, ChartOptions, TooltipItem } from 'chart.js';
 
 type Period = 'week' | 'month' | 'year';
 
@@ -15,14 +17,66 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+type LineModel = { labels: string[]; buckets: number[]; avg: number };
+
+/** 主色渐变填充：从图表顶部 30% 透明度渐隐到底部全透明（hex 追加 alpha） */
+function buildDatasets(chart: Chart<'line'>, model: LineModel): Chart<'line'>['data']['datasets'] {
+  const primary = cssVar('--primary');
+  const grad = chart.ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, `${primary}4d`);
+  grad.addColorStop(1, `${primary}00`);
+  return [
+    {
+      data: model.buckets.map((c) => c / 100),
+      borderColor: primary,
+      backgroundColor: grad,
+      fill: true,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: primary,
+      pointBorderColor: cssVar('--card'),
+      pointBorderWidth: 1.5,
+      tension: 0.35,
+      borderWidth: 2,
+    },
+    {
+      data: model.labels.map(() => model.avg / 100),
+      borderColor: cssVar('--ink-3'),
+      borderDash: [5, 5],
+      pointRadius: 0,
+      borderWidth: 1,
+    },
+  ];
+}
+
+function buildOptions(model: LineModel): ChartOptions<'line'> {
+  const ink3 = cssVar('--ink-3');
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index' as const, intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx: TooltipItem<'line'>) => `¥${(ctx.parsed.y ?? 0).toFixed(2)}` } },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: ink3 } },
+      y: { beginAtZero: true, ticks: { font: { size: 10 }, color: ink3 }, border: { display: false }, grid: { color: cssVar('--line') } },
+    },
+  };
+}
+
 export function ChartPage() {
-  const { bills, categories, currentLedgerId } = useData();
+  const bills = useData((s) => s.bills);
+  const categories = useData((s) => s.categories);
+  const currentLedgerId = useData((s) => s.currentLedgerId);
   const hide = useSettings((s) => s.hideAmount);
   const theme = useTheme();
   const [metric, setMetric] = useState<BillType>('expense');
   const [period, setPeriod] = useState<Period>('week');
   const [offset, setOffset] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart<'line'> | null>(null);
   // 时间基线固定为状态：作为 useMemo 依赖保证稳定，避免每次渲染重算并重建图表
   const [now, setNow] = useState(() => new Date());
   // PWA 从后台恢复（可能已跨天）时刷新时间基线，避免"今天"标记与天数口径停留在昨天
@@ -36,7 +90,8 @@ export function ChartPage() {
   const curMonth = monthKey(now.getTime());
 
   const model = useMemo(() => {
-    const inLedger = bills.filter((b) => b.ledgerId === currentLedgerId && !b.deletedAt && b.type === metric);
+    const inLedger = ledgerBills(bills, currentLedgerId, metric);
+    const catMap = new Map(categories.map((c) => [c.id, c]));
     let labels: string[] = [];
     let buckets: number[] = [];
     let elapsed = 1;
@@ -95,72 +150,42 @@ export function ChartPage() {
     }
     const catTotal = Array.from(byCat.values()).reduce((s, v) => s + v, 0);
     const ranking = Array.from(byCat.entries())
-      .map(([id, cents]) => ({ cat: categories.find((c) => c.id === id), cents, pct: catTotal > 0 ? (cents / catTotal) * 100 : 0 }))
+      .map(([id, cents]) => ({ cat: catMap.get(id), cents, pct: catTotal > 0 ? (cents / catTotal) * 100 : 0 }))
       .sort((a, b) => b.cents - a.cents)
       .slice(0, 10);
 
     return { labels, buckets, total, avg, ranking };
   }, [bills, categories, currentLedgerId, metric, period, offset, curMonth, now]);
 
-  // Chart.js 懒加载渲染（依赖 theme：明暗切换时用新色板重建）
+  // Chart.js 懒加载 + 实例复用：数据/主题变化时只 update() 不销毁重建，避免画布闪烁；
+  // theme 在依赖里是为明暗切换走更新路径重取 CSS 变量色
   useEffect(() => {
-    let chart: { destroy: () => void } | null = null;
+    const chart = chartRef.current;
+    if (chart) {
+      chart.data.labels = model.labels;
+      chart.data.datasets = buildDatasets(chart, model);
+      chart.options = buildOptions(model);
+      chart.update();
+      return;
+    }
     let cancelled = false;
     void import('chart.js/auto').then(({ default: Chart }) => {
       if (cancelled || !canvasRef.current) return;
-      const ink3 = cssVar('--ink-3');
-      const primary = cssVar('--primary');
-      // 主色渐变填充：从图表顶部 30% 透明度渐隐到底部全透明（hex 追加 alpha）
-      const ctx = canvasRef.current.getContext('2d');
-      const grad = ctx?.createLinearGradient(0, 0, 0, 260);
-      if (grad) {
-        grad.addColorStop(0, `${primary}4d`);
-        grad.addColorStop(1, `${primary}00`);
-      }
-      chart = new Chart(canvasRef.current, {
+      const c = new Chart(canvasRef.current, {
         type: 'line',
-        data: {
-          labels: model.labels,
-          datasets: [
-            {
-              data: model.buckets.map((c) => c / 100),
-              borderColor: primary,
-              backgroundColor: grad ?? primary,
-              fill: true,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              pointBackgroundColor: primary,
-              pointBorderColor: cssVar('--card'),
-              pointBorderWidth: 1.5,
-              tension: 0.35,
-              borderWidth: 2,
-            },
-            {
-              data: model.labels.map(() => model.avg / 100),
-              borderColor: ink3,
-              borderDash: [5, 5],
-              pointRadius: 0,
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `¥${(ctx.parsed.y ?? 0).toFixed(2)}` } } },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: ink3 } },
-            y: { beginAtZero: true, ticks: { font: { size: 10 }, color: ink3 }, border: { display: false }, grid: { color: cssVar('--line') } },
-          },
-        },
+        data: { labels: model.labels, datasets: [] },
+        options: buildOptions(model),
       });
+      c.data.datasets = buildDatasets(c, model);
+      c.update();
+      chartRef.current = c;
     });
     return () => {
       cancelled = true;
-      chart?.destroy();
     };
   }, [model, theme]);
+
+  useEffect(() => () => chartRef.current?.destroy(), []);
 
   const offsets = [-4, -3, -2, -1, 0];
   const offsetLabel = (o: number) => {

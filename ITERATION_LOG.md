@@ -4,6 +4,56 @@
 
 ---
 
+## [v1.3.1 - 2026-08-29] - 性能专项二期：热点路径去重算 + 长列表跳过渲染 + 交互减渲
+
+### 📝 更新详情
+- ♻️ **优化 (Changed):**
+  - **明细页每日小计移入 `groups` useMemo**：此前日期收入/支出小计写在渲染体里，对每组做两遍 `filter+reduce`——搜索每敲一个字符就全量重算 O(组×账单)；现随分组一次算好
+  - **发现页当月账单只扫一遍**：收入/支出合计与本月洞察共用同一个 `monthList`（此前 `monthBills` 全量过滤跑两次）；洞察"最高单笔"由 `categories.find`（O(账单×分类)）改为 id→名称 Map；图表页排行榜同理改 Map 索引
+  - **`stats.monthBills` 单遍化**：组合谓词一次遍历完成，去掉"先过滤账本再过滤月份"的中间数组分配（明细/图表/发现页每次数据变更都走这条路径）
+  - **长列表跳过渲染**：明细页账单行加 `content-visibility: auto`（`.cv-auto`，`contain-intrinsic-size: auto 68px` 记住实际高度，滚动无跳动）——视口外的行不再参与布局与绘制，账单越多收益越明显
+  - **记一笔面板减渲**：分类网格/账户行抽成 `memo` 子组件（`CatGrid`/`AccChips`），`NumberKeyboard` 整体 `memo`——金额键盘每敲一键、输备注、换日期时不再重渲整个面板
+  - **跨标签页 reload 防抖**：对方每次写操作都广播一条消息，本页此前逐条全量 `getAll` 重载；现 250ms 防抖合并为一次（回前台的 5s 节流不变）
+- ✅ **验证 (Verified):**
+  - `tsc --noEmit` strict 通过；构建主包 87.3KB / gzip 29.3KB（+0.4KB 为新增代码，无回归）
+  - 浏览器冒烟：插入 357 笔演示数据，当月 119 行全量渲染、按日分组与小计正确、分类 chips/搜索栏正常，`content-visibility` 在全部账单行生效
+
+### 🎯 待办与下一步 (TODO)
+- [ ] **自动同步仍是单向整文件覆盖**：双设备先后 push 会静默覆盖对方较新快照（数据丢失风险）；计划引入 pull → `mergeDumps` → push 流程或 `exportedAt` 冲突检测
+- [ ] bills 的 `byUpdated` 索引从未被查询（增量同步预留），确认用或删
+- [ ] `FullDump` 不含 settings（规格 §5.6），涉及导入恢复语义，独立任务
+- [ ] 明细页如需支撑数千行/月，可再上虚拟滚动（当前 content-visibility 已覆盖大部分收益）
+- [ ] README Roadmap：标签系统（`tags`/`tagIds` 脚手架已就绪）、多币种、周期记账、资产管家
+
+---
+
+### 📝 更新详情
+- ✨ **新增 (Added):**
+  - `src/utils/stats.ts` 共享聚合模块：`ledgerBills` / `monthBills` / `sumByType` / `categoryTotals`，明细/图表/发现页四处重复的月度筛选谓词与收支聚合收敛到一处
+  - `PageSkeleton` 路由加载骨架屏（规格 §5.0 首帧加载态），懒加载路由切换时显示
+  - Sheet 弹层无障碍：`role="dialog"` + `aria-modal`、Escape 关闭、打开聚焦面板/关闭归还焦点、Tab 焦点循环陷阱；NumberKeyboard 退格键补 `aria-label`；Toasts 补 `role="status" aria-live="polite"`
+- ♻️ **优化 (Changed):**
+  - **渲染链路**：`sync()` 按集合做引用稳定化（逐项比较快照，未变化的表复用旧数组引用）+ 13 处 `useData()/useSettings()` 整 store 订阅全部改为逐字段 selector——记一笔不再触发设置页、图表页等无关组件重渲
+  - **首屏包体**：9 个非首屏路由改 `React.lazy` 懒加载 + `manualChunks` 拆出 react-vendor，主包从 ~297KB 降到 87KB（gzip 29KB）
+  - **Chart.js 实例复用**：数据/主题变化时在实例上 `chart.update()` 增量更新，不再销毁重建，消除画布闪烁与重复初始化开销
+  - **PWA 预缓存瘦身**：208KB 的图表块移出首装预缓存（`globIgnores`），补 `runtimeCaching`（CacheFirst）——不看图表的用户首装少下载 208KB，访问过图表页后离线仍可用
+  - `visibilitychange` 触发的全量 `repo.reload()` 加 5 秒节流（跨标签页变更已有 BroadcastChannel 覆盖，此处仅兜底）
+  - `appVersion` 改为构建期从 package.json 注入（`__APP_VERSION__`），不再硬编码 '1.0.0'
+  - `date.pad2` 导出复用，消除 MonthPicker 的重复实现
+- 🐛 **修复 (Fixed):**
+  - **EntrySheet 写失败误报**：存储写入失败（配额满/存储损坏）时不再 toast「已记一笔」并关面板，改为报错并保留面板（规格 §5.1）。注意 repo 吞掉 IDB 异常、promise 永不 reject，通过检查 `writeFailed` 实现
+  - **MonthPicker 年份残留**：组件常驻不卸载，`useState` 只初始化一次——选过 2025 年关闭后再开仍停在 2025；现打开时同步回当前值
+  - **BackupPage 每字符写 IDB**：配置改为 400ms 防抖落盘，卸载与手动同步前强制 flush
+  - 预算编辑回填改用 `toYuanTrim`（12 而非 12.00），与账单编辑回填口径一致
+
+### 🎯 待办与下一步 (TODO)
+- [ ] **自动同步仍是单向整文件覆盖**：双设备先后 push 会静默覆盖对方较新快照（数据丢失风险）；计划引入 pull → `mergeDumps` → push 流程或 `exportedAt` 冲突检测
+- [ ] bills 的 `byUpdated` 索引从未被查询（增量同步预留），确认用或删
+- [ ] `FullDump` 不含 settings（规格 §5.6），涉及导入恢复语义，独立任务
+- [ ] README Roadmap：标签系统（`tags`/`tagIds` 脚手架已就绪）、多币种、周期记账、资产管家
+
+---
+
 ## [v1.2.0 - 2026-08-27] - 稳健性专项：存储写入感知 + 数据正确性修复 + 列表渲染性能优化
 
 ### 📝 更新详情

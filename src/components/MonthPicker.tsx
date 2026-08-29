@@ -1,11 +1,14 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { pad2 } from '../utils/date';
 import { Sheet } from './Sheet';
-
-const p2 = (n: number) => String(n).padStart(2, '0');
 
 export function MonthPicker({ open, value, onChange, onClose }: { open: boolean; value: string; onChange: (ym: string) => void; onClose: () => void }) {
   const [year, setYear] = useState(() => Number(value.slice(0, 4)));
+  // 组件常驻不卸载：重开时把年份同步回当前值，避免残留上次浏览的年份
+  useEffect(() => {
+    if (open) setYear(Number(value.slice(0, 4)));
+  }, [open, value]);
   const curMonth = Number(value.slice(5, 7));
   const now = new Date();
   return (
@@ -28,7 +31,7 @@ export function MonthPicker({ open, value, onChange, onClose }: { open: boolean;
                 key={m}
                 className={`h-11 rounded-xl text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'bg-fill text-ink-2'}`}
                 onClick={() => {
-                  onChange(`${year}-${p2(m)}`);
+                  onChange(`${year}-${pad2(m)}`);
                   onClose();
                 }}
               >
@@ -40,7 +43,7 @@ export function MonthPicker({ open, value, onChange, onClose }: { open: boolean;
         <button
           className="w-full h-11 mt-4 rounded-xl bg-fill text-sm text-ink-2"
           onClick={() => {
-            onChange(`${now.getFullYear()}-${p2(now.getMonth() + 1)}`);
+            onChange(`${now.getFullYear()}-${pad2(now.getMonth() + 1)}`);
             onClose();
           }}
         >

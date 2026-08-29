@@ -33,6 +33,20 @@ interface DataState {
   setBudget: (yearMonth: string, cents: number | null) => Promise<void>;
 }
 
+/** 集合上次快照：内容未变时复用旧数组引用，避免未变化的表触发订阅者重渲。
+ * repo 的变更均为整条替换/新增/生成新数组，未变条目保持对象引用，故逐项 === 比较可靠。 */
+const lastArrays = new Map<string, unknown[]>();
+
+function stableArray<T>(key: string, source: readonly T[]): T[] {
+  const prev = lastArrays.get(key) as T[] | undefined;
+  if (prev && prev.length === source.length && prev.every((item, i) => item === source[i])) {
+    return prev;
+  }
+  const copy = [...source];
+  lastArrays.set(key, copy);
+  return copy;
+}
+
 export const useData = create<DataState>((set, get) => ({
   ready: false,
   mode: 'memory',
@@ -56,12 +70,12 @@ export const useData = create<DataState>((set, get) => ({
 
   sync: () =>
     set({
-      bills: [...repo.data.bills],
-      categories: [...repo.data.categories],
-      accounts: [...repo.data.accounts],
-      tags: [...repo.data.tags],
-      ledgers: [...repo.data.ledgers],
-      budgets: [...repo.data.budgets],
+      bills: stableArray('bills', repo.data.bills),
+      categories: stableArray('categories', repo.data.categories),
+      accounts: stableArray('accounts', repo.data.accounts),
+      tags: stableArray('tags', repo.data.tags),
+      ledgers: stableArray('ledgers', repo.data.ledgers),
+      budgets: stableArray('budgets', repo.data.budgets),
       writeFailed: repo.writeFailed,
     }),
 

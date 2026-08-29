@@ -3,13 +3,18 @@ import { ChevronRight, TrendingDown, TrendingUp, Minus, Zap, Crown, CalendarCloc
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
 import { monthKey, monthKeyOffset, daysInMonth } from '../utils/date';
-import { toYuan, parseYuanToCents } from '../utils/money';
+import { toYuan, toYuanTrim, parseYuanToCents } from '../utils/money';
+import { monthBills, sumByType } from '../utils/stats';
 import { Sheet } from '../components/Sheet';
 import { useUI } from '../store/ui';
 import { useNavigate } from 'react-router-dom';
 
 export function DiscoverPage() {
-  const { bills, budgets, categories, currentLedgerId, setBudget } = useData();
+  const bills = useData((s) => s.bills);
+  const budgets = useData((s) => s.budgets);
+  const categories = useData((s) => s.categories);
+  const currentLedgerId = useData((s) => s.currentLedgerId);
+  const setBudget = useData((s) => s.setBudget);
   const hide = useSettings((s) => s.hideAmount);
   const toast = useUI((s) => s.toast);
   const navigate = useNavigate();
@@ -27,28 +32,20 @@ export function DiscoverPage() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
   const ym = monthKey(now.getTime());
-  const sums = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const b of bills) {
-      if (b.ledgerId !== currentLedgerId || b.deletedAt || monthKey(b.occurredAt) !== ym) continue;
-      if (b.type === 'income') income += b.amountCents;
-      else expense += b.amountCents;
-    }
-    return { income, expense, balance: income - expense };
-  }, [bills, currentLedgerId, ym]);
+  // 当月账单只扫一遍：收入/支出合计与本月洞察共用（此前 monthBills 全量过滤跑两次）
+  const monthList = useMemo(() => monthBills(bills, currentLedgerId, ym), [bills, currentLedgerId, ym]);
+  const sums = useMemo(() => sumByType(monthList), [monthList]);
+  const catNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
 
   /** 本月洞察：日均 / 最高单笔 / 环比上月同期 / 月底线性外推 */
   const insight = useMemo(() => {
-    const monthBills = bills.filter(
-      (b) => b.ledgerId === currentLedgerId && !b.deletedAt && b.type === 'expense' && monthKey(b.occurredAt) === ym,
-    );
+    const monthExpenseBills = monthList.filter((b) => b.type === 'expense');
     const daysElapsed = now.getDate();
     const daily = daysElapsed > 0 ? Math.round(sums.expense / daysElapsed) : 0;
 
-    const top = monthBills.reduce<{ cents: number; name: string } | null>((acc, b) => {
+    const top = monthExpenseBills.reduce<{ cents: number; name: string } | null>((acc, b) => {
       if (!acc || b.amountCents > acc.cents) {
-        return { cents: b.amountCents, name: categories.find((c) => c.id === b.categoryId)?.name ?? '未分类' };
+        return { cents: b.amountCents, name: catNames.get(b.categoryId) ?? '未分类' };
       }
       return acc;
     }, null);
@@ -68,7 +65,7 @@ export function DiscoverPage() {
 
     const projected = daily * daysInMonth(ym);
     return { daily, top, mom, projected };
-  }, [bills, categories, currentLedgerId, ym, sums.expense, now]);
+  }, [monthList, catNames, currentLedgerId, ym, sums.expense, now]);
 
   const budget = budgets.find((b) => b.yearMonth === ym);
   const used = sums.expense;
@@ -135,7 +132,7 @@ export function DiscoverPage() {
         <div className="bg-card rounded-2xl p-4">
           <div className="flex items-center justify-between text-sm font-medium mb-3">
             {ym.slice(5)}月总预算
-            <button onClick={() => { setInput(budget ? toYuan(budget.amountCents) : ''); setEditOpen(true); }}>
+            <button onClick={() => { setInput(budget ? toYuanTrim(budget.amountCents) : ''); setEditOpen(true); }}>
               <ChevronRight size={16} className="text-ink-3" />
             </button>
           </div>

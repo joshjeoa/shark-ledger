@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { SettingsShell, Toggle } from './SettingsShell';
 import { useUI } from '../../store/ui';
 import {
@@ -21,6 +21,8 @@ export function BackupPage() {
   const [pass1, setPass1] = useState('');
   const [pass2, setPass2] = useState('');
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingCfg = useRef<SyncConfig | null>(null);
 
   useEffect(() => {
     const c = getSyncConfig();
@@ -29,10 +31,24 @@ export function BackupPage() {
     refreshSyncUI();
   }, []);
 
+  // 卸载时落盘未保存的配置，避免用户输完即离开导致丢失
+  useEffect(() => () => flushCfg(), []);
+
+  const flushCfg = () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    if (pendingCfg.current) {
+      void saveSyncConfig(pendingCfg.current);
+      pendingCfg.current = null;
+    }
+  };
+
   const patch = (p: Partial<SyncConfig>) => {
     const next = { ...cfg, ...p };
     setCfg(next);
-    void saveSyncConfig(next);
+    pendingCfg.current = next;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushCfg, 400);
   };
 
   const onTest = async () => {
@@ -44,6 +60,7 @@ export function BackupPage() {
   };
 
   const onSync = async () => {
+    flushCfg(); // doSync 从存储读配置，先落盘防抖中的最新值
     setBusy('sync');
     await doSync();
     setBusy('');

@@ -9,7 +9,9 @@ import { uuid } from '../../utils/compat';
 import type { BillType, Category } from '../../types';
 
 export function CategoriesPage() {
-  const { categories, upsertCategory, deleteCategory } = useData();
+  const categories = useData((s) => s.categories);
+  const upsertCategory = useData((s) => s.upsertCategory);
+  const deleteCategory = useData((s) => s.deleteCategory);
   const toast = useUI((s) => s.toast);
   const confirm = useUI((s) => s.confirm);
   const [tab, setTab] = useState<BillType>('expense');

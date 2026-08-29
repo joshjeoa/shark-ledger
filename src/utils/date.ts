@@ -1,10 +1,10 @@
 /** 日期工具：全部按设备本地时区；周起始 = 周一 */
 
-const p2 = (n: number) => String(n).padStart(2, '0');
+export const pad2 = (n: number) => String(n).padStart(2, '0');
 
 export function dayKey(t: number): string {
   const d = new Date(t);
-  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 export function monthKey(t: number): string {
@@ -38,7 +38,7 @@ export function daysInMonth(yearMonth: string): number {
 export function monthKeyOffset(yearMonth: string, offset: number): string {
   const [y = 2026, m = 1] = yearMonth.split('-').map(Number);
   const d = new Date(y, m - 1 + offset, 1);
-  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
 }
 
 export function monthLabelCN(yearMonth: string): string {
@@ -48,5 +48,5 @@ export function monthLabelCN(yearMonth: string): string {
 
 export function shortMD(t: number): string {
   const d = new Date(t);
-  return `${d.getMonth() + 1}-${p2(d.getDate())}`;
+  return `${d.getMonth() + 1}-${pad2(d.getDate())}`;
 }

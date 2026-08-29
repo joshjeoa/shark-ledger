@@ -5,6 +5,7 @@ import { useSettings } from '../store/settings';
 import { useUI } from '../store/ui';
 import { dayKey, monthKey, weekdayLabel, monthLabelCN } from '../utils/date';
 import { toYuan } from '../utils/money';
+import { monthBills, sumByType, categoryTotals } from '../utils/stats';
 import { CatIcon } from '../utils/iconMap';
 import { MonthPicker } from '../components/MonthPicker';
 import { EmptyState } from '../components/EmptyState';
@@ -14,8 +15,15 @@ import type { Bill, Category } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export function DetailPage() {
-  const { bills, categories, ledgers, currentLedgerId, setCurrentLedger, removeBill } = useData();
-  const settings = useSettings();
+  const bills = useData((s) => s.bills);
+  const categories = useData((s) => s.categories);
+  const ledgers = useData((s) => s.ledgers);
+  const currentLedgerId = useData((s) => s.currentLedgerId);
+  const setCurrentLedger = useData((s) => s.setCurrentLedger);
+  const removeBill = useData((s) => s.removeBill);
+  const hide = useSettings((s) => s.hideAmount);
+  const colorAmounts = useSettings((s) => s.colorAmounts);
+  const setSettings = useSettings((s) => s.set);
   const openEntry = useUI((s) => s.openEntry);
   const confirm = useUI((s) => s.confirm);
   const toast = useUI((s) => s.toast);
@@ -28,46 +36,35 @@ export function DetailPage() {
   const [query, setQuery] = useState('');
   const [filterCat, setFilterCat] = useState('');
 
-  const hide = settings.hideAmount;
   const show = (cents: number) => (hide ? '****' : toYuan(cents));
 
-  const monthBills = useMemo(
-    () => bills.filter((b) => b.ledgerId === currentLedgerId && !b.deletedAt && monthKey(b.occurredAt) === month),
+  const monthBillList = useMemo(
+    () => monthBills(bills, currentLedgerId, month),
     [bills, currentLedgerId, month],
   );
 
   // 分类 id → 对象索引，避免过滤/渲染时对每条账单做线性 find
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
-  const sums = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const b of monthBills) {
-      if (b.type === 'income') income += b.amountCents;
-      else expense += b.amountCents;
-    }
-    return { income, expense, balance: income - expense };
-  }, [monthBills]);
+  const sums = useMemo(() => sumByType(monthBillList), [monthBillList]);
 
   /** 当月出现过的分类（筛选 chips 用），按金额降序 */
   const monthCats = useMemo(() => {
-    const byCat = new Map<string, number>();
-    for (const b of monthBills) byCat.set(b.categoryId, (byCat.get(b.categoryId) ?? 0) + b.amountCents);
-    return Array.from(byCat.entries())
+    return Array.from(categoryTotals(monthBillList).entries())
       .sort((a, b) => b[1] - a[1])
       .map(([id, cents]) => ({ cat: catMap.get(id), cents }))
       .filter((x): x is { cat: Category; cents: number } => !!x.cat);
-  }, [monthBills, catMap]);
+  }, [monthBillList, catMap]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
-    return monthBills.filter((b) => {
+    return monthBillList.filter((b) => {
       if (filterCat && b.categoryId !== filterCat) return false;
       if (!q) return true;
       const cat = catMap.get(b.categoryId);
       return b.note.includes(q) || (cat?.name ?? '').includes(q) || toYuan(b.amountCents).startsWith(q);
     });
-  }, [monthBills, query, filterCat, catMap]);
+  }, [monthBillList, query, filterCat, catMap]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Bill[]>();
@@ -81,8 +78,18 @@ export function DetailPage() {
     for (const arr of map.values()) {
       arr.sort((a, b) => b.createdAt - a.createdAt || b.occurredAt - a.occurredAt);
     }
-    // 分组：按日期倒序（今天在上，昨天在下）
-    return Array.from(map.entries()).sort((a, b) => (a[0] > b[0] ? -1 : 1));
+    // 日期小计也在此一并算好：此前在渲染体里对每组做两遍 filter+reduce，搜索每敲一个字都重算
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] > b[0] ? -1 : 1))
+      .map(([day, items]) => {
+        let dayIncome = 0;
+        let dayExpense = 0;
+        for (const b of items) {
+          if (b.type === 'income') dayIncome += b.amountCents;
+          else dayExpense += b.amountCents;
+        }
+        return { day, items, dayIncome, dayExpense };
+      });
   }, [filtered]);
 
   // 稳定回调：配合 memo(BillRow)，让搜索输入等父组件重渲不再逐行重渲账单列表
@@ -126,7 +133,7 @@ export function DetailPage() {
             </button>
             <div className="flex items-center gap-2">
               <SyncChip onClick={() => navigate('/settings/backup')} />
-              <button aria-label="隐藏金额" onClick={() => settings.set({ hideAmount: !hide })}>
+              <button aria-label="隐藏金额" onClick={() => setSettings({ hideAmount: !hide })}>
                 {hide ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -196,10 +203,8 @@ export function DetailPage() {
         {groups.length === 0 ? (
           <EmptyState text={query ? '没有找到相关账单' : '开始记第一笔吧'} actionLabel={query ? undefined : '记一笔'} onAction={() => openEntry(null)} />
         ) : (
-          groups.map(([day, items]) => {
+          groups.map(({ day, items, dayIncome, dayExpense }) => {
             const t = new Date(`${day}T12:00:00`).getTime();
-            const dayIncome = items.filter((b) => b.type === 'income').reduce((s, b) => s + b.amountCents, 0);
-            const dayExpense = items.filter((b) => b.type === 'expense').reduce((s, b) => s + b.amountCents, 0);
             return (
               <section key={day}>
                 <div className="flex justify-between px-4 py-2 text-xs text-ink-3">
@@ -214,7 +219,7 @@ export function DetailPage() {
                 </div>
                 <div className="bg-card">
                   {items.map((b) => (
-                    <BillRow key={b.id} bill={b} hide={hide} color={settings.colorAmounts} onTap={onTap} onDelete={onDelete} cat={catMap.get(b.categoryId)} />
+                    <BillRow key={b.id} bill={b} hide={hide} color={colorAmounts} onTap={onTap} onDelete={onDelete} cat={catMap.get(b.categoryId)} />
                   ))}
                 </div>
               </section>
@@ -281,7 +286,7 @@ const BillRow = memo(function BillRow({
   const amountColor = color ? (bill.type === 'expense' ? 'text-danger' : 'text-success') : 'text-ink';
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 border-b border-line no-callout active:bg-surface transition-colors"
+      className="cv-auto flex items-center gap-3 px-4 py-3 border-b border-line no-callout active:bg-surface transition-colors"
       onTouchStart={start}
       onTouchEnd={stop}
       onTouchMove={stop}

@@ -7,7 +7,10 @@ import { Sheet } from '../../components/Sheet';
 import { uuid } from '../../utils/compat';
 
 export function LedgersPage() {
-  const { ledgers, currentLedgerId, setCurrentLedger, upsertLedger } = useData();
+  const ledgers = useData((s) => s.ledgers);
+  const currentLedgerId = useData((s) => s.currentLedgerId);
+  const setCurrentLedger = useData((s) => s.setCurrentLedger);
+  const upsertLedger = useData((s) => s.upsertLedger);
   const toast = useUI((s) => s.toast);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

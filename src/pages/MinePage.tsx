@@ -8,8 +8,9 @@ import { Sheet } from '../components/Sheet';
 import { useNavigate } from 'react-router-dom';
 
 export function MinePage() {
-  const { bills } = useData();
-  const settings = useSettings();
+  const bills = useData((s) => s.bills);
+  const nickname = useSettings((s) => s.nickname);
+  const setSettings = useSettings((s) => s.set);
   const navigate = useNavigate();
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -25,9 +26,9 @@ export function MinePage() {
         <div className="px-4 pt-6 pb-8">
           <div className="flex items-center gap-3">
             <span className="w-14 h-14 rounded-full bg-header-fill text-header-fill-ink flex items-center justify-center text-xl font-bold">
-              {settings.nickname.slice(0, 1) || '我'}
+              {nickname.slice(0, 1) || '我'}
             </span>
-            <span className="text-xl font-bold">{settings.nickname}</span>
+            <span className="text-xl font-bold">{nickname}</span>
           </div>
           <div className="grid grid-cols-2 text-center mt-6">
             <span>
@@ -51,7 +52,7 @@ export function MinePage() {
             onClick={() => {
               if (isStandalone()) return;
               setGuideOpen(true);
-              settings.set({ guideSeen: true });
+              setSettings({ guideSeen: true });
             }}
           />
           <Row icon={<Info size={20} />} label="关于" onClick={() => navigate('/settings/about')} />

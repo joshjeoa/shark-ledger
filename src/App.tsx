@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { useData } from './store/data';
@@ -13,16 +13,19 @@ import { Toasts } from './components/Toasts';
 import { ConfirmSheet } from './components/ConfirmSheet';
 import { EntrySheet } from './features/EntrySheet';
 import { DetailPage } from './pages/DetailPage';
-import { ChartPage } from './pages/ChartPage';
-import { DiscoverPage } from './pages/DiscoverPage';
-import { MinePage } from './pages/MinePage';
-import { SettingsHome } from './pages/settings/SettingsHome';
-import { CategoriesPage } from './pages/settings/CategoriesPage';
-import { AccountsPage } from './pages/settings/AccountsPage';
-import { LedgersPage } from './pages/settings/LedgersPage';
-import { DataPage } from './pages/settings/DataPage';
-import { BackupPage } from './pages/settings/BackupPage';
-import { AboutPage } from './pages/settings/AboutPage';
+import { PageSkeleton } from './components/PageSkeleton';
+
+// 非首屏路由懒加载：主包只含明细页，图表/发现/设置等按需拉取
+const ChartPage = lazy(() => import('./pages/ChartPage').then((m) => ({ default: m.ChartPage })));
+const DiscoverPage = lazy(() => import('./pages/DiscoverPage').then((m) => ({ default: m.DiscoverPage })));
+const MinePage = lazy(() => import('./pages/MinePage').then((m) => ({ default: m.MinePage })));
+const SettingsHome = lazy(() => import('./pages/settings/SettingsHome').then((m) => ({ default: m.SettingsHome })));
+const CategoriesPage = lazy(() => import('./pages/settings/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
+const AccountsPage = lazy(() => import('./pages/settings/AccountsPage').then((m) => ({ default: m.AccountsPage })));
+const LedgersPage = lazy(() => import('./pages/settings/LedgersPage').then((m) => ({ default: m.LedgersPage })));
+const DataPage = lazy(() => import('./pages/settings/DataPage').then((m) => ({ default: m.DataPage })));
+const BackupPage = lazy(() => import('./pages/settings/BackupPage').then((m) => ({ default: m.BackupPage })));
+const AboutPage = lazy(() => import('./pages/settings/AboutPage').then((m) => ({ default: m.AboutPage })));
 
 /** PWA 更新提示：SW 检测到新版本时弹横幅，用户确认后刷新 */
 try {
@@ -48,13 +51,18 @@ export default function App() {
   const updateReady = useUI((s) => s.updateReady);
   const runUpdate = useUI((s) => s.runUpdate);
 
+  const lastVisibleRefresh = useRef(0);
   useEffect(() => {
     setupAppHeight();
     void useData.getState().init();
     setupSyncLifecycle();
     refreshSyncUI();
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void useData.getState().refresh();
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastVisibleRefresh.current < 5000) return; // 节流：防频繁切后台触发全量重载
+      lastVisibleRefresh.current = now;
+      void useData.getState().refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
@@ -118,7 +126,8 @@ export default function App() {
           )}
 
           <div className="h-full overflow-y-auto hide-scrollbar">
-            <Routes>
+            <Suspense fallback={<PageSkeleton />}>
+              <Routes>
               <Route path="/" element={<DetailPage />} />
               <Route path="/chart" element={<ChartPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
@@ -131,7 +140,8 @@ export default function App() {
               <Route path="/settings/backup" element={<BackupPage />} />
               <Route path="/settings/about" element={<AboutPage />} />
               <Route path="*" element={<DetailPage />} />
-            </Routes>
+              </Routes>
+            </Suspense>
           </div>
 
           <TabBar />

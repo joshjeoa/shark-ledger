@@ -128,6 +128,12 @@ body {
   scrollbar-width: none;
 }
 
+/* 长列表跳过渲染：视口外的行不参与布局/绘制（contain-intrinsic-size: auto 会记住上次实际高度，滚动无跳动） */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 68px;
+}
+
 @keyframes sheet-up {
   from {
     transform: translateY(100%);

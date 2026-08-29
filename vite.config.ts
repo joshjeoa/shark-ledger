@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import pkg from './package.json';
 
 /** 规格 §6.3：生产构建注入 CSP（dev 注入会阻断 Vite HMR，故仅 build 生效）。
  * connect-src 放宽到 https: 是因为云备份中继地址由用户自行配置。 */
@@ -49,10 +50,32 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // chart.js 懒加载块移出预缓存：多数用户不看图表，首装不必下载；访问后由下方运行时缓存接管离线
+        globIgnores: ['assets/auto-*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: /\.(?:js|css)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-resources',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
         navigateFallback: 'index.html',
       },
     }),
   ],
   server: { host: true },
-  build: { target: 'es2020' },
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  build: {
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 });

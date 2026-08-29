@@ -33,6 +33,7 @@ class Repo {
 
   private db?: IDBPDatabase;
   private saveTimer?: ReturnType<typeof setTimeout>;
+  private reloadTimer?: ReturnType<typeof setTimeout>;
   private bc?: BroadcastChannel;
 
   async init(): Promise<void> {
@@ -84,13 +85,20 @@ class Repo {
     // 多标签页同步
     try {
       this.bc = new BroadcastChannel('shark-ledger');
-      this.bc.onmessage = () => void this.reload();
+      this.bc.onmessage = () => this.scheduleReload();
     } catch {
       /* 旧浏览器忽略 */
     }
     window.addEventListener('storage', (e) => {
-      if (e.key === LS_KEY && this.mode !== 'idb') void this.reload();
+      if (e.key === LS_KEY && this.mode !== 'idb') this.scheduleReload();
     });
+  }
+
+  /** 跨标签页变更触发的全量重载：对方每次写操作都会广播一条消息，
+   * 连续记账会产生消息风暴——250ms 防抖合并为一次 getAll。 */
+  private scheduleReload(): void {
+    clearTimeout(this.reloadTimer);
+    this.reloadTimer = setTimeout(() => void this.reload(), 250);
   }
 
   /** 从持久层重新加载（多标签页/回前台场景）。meta 一并刷新，避免 syncConfig 等跨标签页读到旧值 */
@@ -329,7 +337,7 @@ class Repo {
   // ---------- 导出 / 恢复 ----------
   fullDump(): FullDump {
     return {
-      meta: { schemaVersion: SCHEMA_VERSION, exportedAt: Date.now(), appVersion: '1.0.0' },
+      meta: { schemaVersion: SCHEMA_VERSION, exportedAt: Date.now(), appVersion: __APP_VERSION__ },
       data: {
         bills: this.data.bills,
         categories: this.data.categories,

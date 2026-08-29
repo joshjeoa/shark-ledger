@@ -16,7 +16,13 @@ import type { FullDump } from '../../types';
 const today = () => dayKey(Date.now());
 
 export function DataPage() {
-  const { bills, categories, accounts, tags, currentLedgerId, budgets, restoreBill } = useData();
+  const bills = useData((s) => s.bills);
+  const categories = useData((s) => s.categories);
+  const accounts = useData((s) => s.accounts);
+  const tags = useData((s) => s.tags);
+  const currentLedgerId = useData((s) => s.currentLedgerId);
+  const budgets = useData((s) => s.budgets);
+  const restoreBill = useData((s) => s.restoreBill);
   const toast = useUI((s) => s.toast);
   const confirm = useUI((s) => s.confirm);
   const fileRef = useRef<HTMLInputElement>(null);

@@ -13,16 +13,22 @@ const APPEARANCES: { value: Appearance; label: string; icon: typeof Sun }[] = [
 ];
 
 export function SettingsHome() {
-  const s = useSettings();
+  const nickname = useSettings((s) => s.nickname);
+  const themeColor = useSettings((s) => s.themeColor);
+  const appearance = useSettings((s) => s.appearance);
+  const defaultType = useSettings((s) => s.defaultType);
+  const hideAmount = useSettings((s) => s.hideAmount);
+  const colorAmounts = useSettings((s) => s.colorAmounts);
+  const setSettings = useSettings((s) => s.set);
   const navigate = useNavigate();
   const [nameOpen, setNameOpen] = useState(false);
-  const [name, setName] = useState(s.nickname);
+  const [name, setName] = useState(nickname);
 
   return (
     <SettingsShell title="设置">
       <div className="px-3 pt-3 space-y-3">
         <div className="bg-card rounded-2xl divide-y divide-line">
-          <Item label="昵称" value={s.nickname} onClick={() => { setName(s.nickname); setNameOpen(true); }} />
+          <Item label="昵称" value={nickname} onClick={() => { setName(nickname); setNameOpen(true); }} />
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm flex items-center gap-2"><Palette size={18} className="text-ink-3" /> 主题色</span>
             <div className="flex gap-2">
@@ -30,9 +36,9 @@ export function SettingsHome() {
                 <button
                   key={c}
                   aria-label={`主题色 ${c}`}
-                  className={`w-6 h-6 rounded-full ${s.themeColor === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`}
+                  className={`w-6 h-6 rounded-full ${themeColor === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`}
                   style={{ background: c }}
-                  onClick={() => s.set({ themeColor: c })}
+                  onClick={() => setSettings({ themeColor: c })}
                 />
               ))}
             </div>
@@ -44,8 +50,8 @@ export function SettingsHome() {
               {APPEARANCES.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 ${s.appearance === value ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`}
-                  onClick={() => s.set({ appearance: value })}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 ${appearance === value ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`}
+                  onClick={() => setSettings({ appearance: value })}
                 >
                   <Icon size={12} />
                   {label}
@@ -56,21 +62,21 @@ export function SettingsHome() {
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm">默认记账类型</span>
             <div className="flex rounded-lg overflow-hidden bg-fill text-xs">
-              <button className={`px-3 py-1.5 ${s.defaultType === 'expense' ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`} onClick={() => s.set({ defaultType: 'expense' })}>
+              <button className={`px-3 py-1.5 ${defaultType === 'expense' ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`} onClick={() => setSettings({ defaultType: 'expense' })}>
                 支出
               </button>
-              <button className={`px-3 py-1.5 ${s.defaultType === 'income' ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`} onClick={() => s.set({ defaultType: 'income' })}>
+              <button className={`px-3 py-1.5 ${defaultType === 'income' ? 'bg-primary text-on-primary font-medium' : 'text-ink-3'}`} onClick={() => setSettings({ defaultType: 'income' })}>
                 收入
               </button>
             </div>
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-sm flex items-center gap-2">{s.hideAmount ? <EyeOff size={18} className="text-ink-3" /> : <Eye size={18} className="text-ink-3" />} 隐藏总金额</span>
-            <Toggle on={s.hideAmount} onChange={(v) => s.set({ hideAmount: v })} />
+            <span className="text-sm flex items-center gap-2">{hideAmount ? <EyeOff size={18} className="text-ink-3" /> : <Eye size={18} className="text-ink-3" />} 隐藏总金额</span>
+            <Toggle on={hideAmount} onChange={(v) => setSettings({ hideAmount: v })} />
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm">金额红绿配色</span>
-            <Toggle on={s.colorAmounts} onChange={(v) => s.set({ colorAmounts: v })} />
+            <Toggle on={colorAmounts} onChange={(v) => setSettings({ colorAmounts: v })} />
           </div>
         </div>
 
@@ -93,7 +99,7 @@ export function SettingsHome() {
           <button
             className="w-full h-11 rounded-xl bg-primary text-on-primary font-medium"
             onClick={() => {
-              s.set({ nickname: name.trim() || '我' });
+              setSettings({ nickname: name.trim() || '我' });
               setNameOpen(false);
             }}
           >
