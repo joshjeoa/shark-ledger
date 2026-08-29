@@ -1,6 +1,6 @@
 import { deleteDB, openDB, type IDBPDatabase } from 'idb';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const DB_NAME = 'shark-ledger';
 
 export type StorageMode = 'idb' | 'local' | 'memory';
@@ -46,6 +46,11 @@ export async function openLedgerDB(): Promise<IDBPDatabase> {
       if (!db.objectStoreNames.contains('ledgers')) db.createObjectStore('ledgers', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('budgets')) db.createObjectStore('budgets', { keyPath: 'yearMonth' });
       if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
+      // v2：账单凭证照片（Blob 本地存储，不参与备份/同步）
+      if (!db.objectStoreNames.contains('photos')) {
+        const photos = db.createObjectStore('photos', { keyPath: 'id' });
+        photos.createIndex('byBill', 'billId');
+      }
     },
   });
 }

@@ -62,6 +62,7 @@ export function validateDump(data: unknown): { ok: boolean; errors: string[]; du
       (b.accountId === undefined || typeof b.accountId === 'string') &&
       (b.ledgerId === undefined || typeof b.ledgerId === 'string') &&
       (b.tagIds === undefined || (Array.isArray(b.tagIds) && b.tagIds.every((t) => typeof t === 'string'))) &&
+      (b.photoIds === undefined || (Array.isArray(b.photoIds) && b.photoIds.every((t) => typeof t === 'string'))) &&
       (b.deletedAt === undefined || typeof b.deletedAt === 'number'),
   );
   arr(d.categories, 'categories', (c) => typeof c.id === 'string' && typeof c.name === 'string');
@@ -70,7 +71,8 @@ export function validateDump(data: unknown): { ok: boolean; errors: string[]; du
   arr(d.ledgers, 'ledgers', (l) => typeof l.id === 'string' && typeof l.name === 'string');
   arr(d.budgets, 'budgets', (b) => typeof b.yearMonth === 'string' && typeof b.amountCents === 'number');
   if (errors.length) return { ok: false, errors };
-  // 归一化旧版/手工编辑备份中缺失的可选字段，杜绝 tagIds/note 为空时在 CSV 导出、编辑回填处崩溃
-  const normalized = bills.map((b) => ({ ...b, note: b.note ?? '', tagIds: b.tagIds ?? [] }));
+  // 归一化旧版/手工编辑备份中缺失的可选字段，杜绝 tagIds/note 为空时在 CSV 导出、编辑回填处崩溃。
+  // 照片 Blob 不在备份内，恢复后 photoIds 指向的照片不存在时 UI 显示占位（查看器/缩略图均有兜底）
+  const normalized = bills.map((b) => ({ ...b, note: b.note ?? '', tagIds: b.tagIds ?? [], photoIds: b.photoIds ?? [] }));
   return { ok: true, errors: [], dump: { ...d, bills: normalized } as FullDump['data'] };
 }

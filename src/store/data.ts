@@ -21,7 +21,7 @@ interface DataState {
   sync: () => void;
   refresh: () => Promise<void>;
   setCurrentLedger: (id: string) => void;
-  addBill: (input: { type: Bill['type']; amountCents: number; categoryId: string; note: string; accountId?: string; occurredAt: number; tagIds?: string[]; ledgerId?: string }) => Promise<Bill>;
+  addBill: (input: { type: Bill['type']; amountCents: number; categoryId: string; note: string; accountId?: string; occurredAt: number; tagIds?: string[]; ledgerId?: string; photoIds?: string[] }) => Promise<Bill>;
   updateBill: (bill: Bill) => Promise<void>;
   removeBill: (id: string) => Promise<void>;
   restoreBill: (id: string) => Promise<void>;
@@ -102,6 +102,7 @@ export const useData = create<DataState>((set, get) => ({
       occurredAt: input.occurredAt,
       createdAt: now,
       updatedAt: now,
+      ...(input.photoIds?.length ? { photoIds: input.photoIds } : {}),
     };
     await repo.upsertBill(bill);
     scheduleSync();

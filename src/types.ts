@@ -13,6 +13,16 @@ export interface Bill {
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
+  /** 凭证照片（本地 IndexedDB photos 表的 id 列表，最多 3 张）。不参与云备份/同步 */
+  photoIds?: string[];
+}
+
+/** 凭证照片：仅存本地 IndexedDB（体积原因不进 JSON 备份/云同步通道） */
+export interface Photo {
+  id: string;
+  billId: string;
+  blob: Blob;
+  createdAt: number;
 }
 
 export interface Category {

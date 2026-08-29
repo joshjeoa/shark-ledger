@@ -1,8 +1,9 @@
 import type { IDBPDatabase } from 'idb';
-import type { Account, Bill, Budget, Category, FullDump, Ledger, Tag } from '../types';
+import type { Account, Bill, Budget, Category, FullDump, Ledger, Photo, Tag } from '../types';
 import { openLedgerDB, probeStorage, runMigrations, SCHEMA_VERSION, type StorageMode } from './schema';
 import { seedAccounts, seedCategories, seedLedgers } from './seed';
 import { mergeDumps } from '../utils/merge';
+import { uuid } from '../utils/compat';
 
 export interface DBData {
   bills: Bill[];
@@ -35,6 +36,8 @@ class Repo {
   private saveTimer?: ReturnType<typeof setTimeout>;
   private reloadTimer?: ReturnType<typeof setTimeout>;
   private bc?: BroadcastChannel;
+  /** 照片 objectURL 会话级缓存：列表缩略图与查看大图共用，避免重复解码 */
+  private photoURLs = new Map<string, string>();
 
   async init(): Promise<void> {
     const probe = await probeStorage();
@@ -228,8 +231,16 @@ class Repo {
   // ---------- bills ----------
   async upsertBill(bill: Bill): Promise<void> {
     const i = this.data.bills.findIndex((b) => b.id === bill.id);
+    const prev = i >= 0 ? this.data.bills[i] : undefined;
     if (i >= 0) this.data.bills[i] = bill;
     else this.data.bills.push(bill);
+    // 清掉编辑时被移除的照片（新列表里已不存在的旧 id）
+    if (prev?.photoIds?.length) {
+      const keep = new Set(bill.photoIds ?? []);
+      for (const pid of prev.photoIds) {
+        if (!keep.has(pid)) void this.deletePhoto(pid);
+      }
+    }
     await this.putStore('bills', bill);
     this.commit();
   }
@@ -237,6 +248,7 @@ class Repo {
   private purgeBill(id: string): void {
     this.data.bills = this.data.bills.filter((b) => b.id !== id);
     void this.delStore('bills', id);
+    void this.deletePhotosForBill(id); // 30 天到期彻底删除时连带清理凭证照片
   }
 
   async deleteBill(id: string, soft: boolean): Promise<void> {
@@ -332,6 +344,97 @@ class Repo {
       await this.putStore('budgets', budget);
     } else this.scheduleSave();
     this.commit();
+  }
+
+  // ---------- 凭证照片（仅 IDB 模式；不参与备份/同步） ----------
+  private get photoReady(): boolean {
+    return this.mode === 'idb' && !!this.db;
+  }
+
+  async putPhoto(billId: string, blob: Blob): Promise<string | null> {
+    if (!this.photoReady) return null;
+    const photo: Photo = { id: uuid(), billId, blob, createdAt: Date.now() };
+    try {
+      await this.db!.put('photos', photo);
+      this.writeFailed = false;
+    } catch {
+      this.writeFailed = true;
+      return null;
+    }
+    return photo.id;
+  }
+
+  /** 新建流程占位迁移：把 'pending' 归属的照片改挂到正式账单 id 下 */
+  async reassignPhoto(id: string, billId: string): Promise<void> {
+    if (!this.photoReady) return;
+    try {
+      const photo = (await this.db!.get('photos', id)) as Photo | undefined;
+      if (!photo || photo.billId === billId) return;
+      await this.db!.put('photos', { ...photo, billId });
+    } catch {
+      /* 迁移失败不影响账单 */
+    }
+  }
+
+  async deletePhoto(id: string): Promise<void> {
+    const url = this.photoURLs.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.photoURLs.delete(id);
+    }
+    if (!this.photoReady) return;
+    try {
+      await this.db!.delete('photos', id);
+    } catch {
+      /* 照片删除失败不阻塞账单保存 */
+    }
+  }
+
+  private async deletePhotosForBill(billId: string): Promise<void> {
+    if (!this.photoReady) return;
+    try {
+      const ids = await this.db!.getAllKeysFromIndex('photos', 'byBill', billId);
+      for (const id of ids) {
+        const url = this.photoURLs.get(String(id));
+        if (url) {
+          URL.revokeObjectURL(url);
+          this.photoURLs.delete(String(id));
+        }
+        void this.db!.delete('photos', id);
+      }
+    } catch {
+      /* 清理失败不影响主流程 */
+    }
+  }
+
+  /** 已加载的缩略图地址（同步读，未加载返回 undefined） */
+  photoURL(id: string): string | undefined {
+    return this.photoURLs.get(id);
+  }
+
+  /** 加载照片并生成 objectURL（缓存后复用） */
+  async loadPhotoURL(id: string): Promise<string | undefined> {
+    const cached = this.photoURLs.get(id);
+    if (cached) return cached;
+    if (!this.photoReady) return undefined;
+    try {
+      const photo = (await this.db!.get('photos', id)) as Photo | undefined;
+      if (!photo) return undefined;
+      const url = URL.createObjectURL(photo.blob);
+      // 上限防御：极端情况下（长会话浏览大量照片）丢弃最早的缓存项
+      if (this.photoURLs.size >= 300) {
+        const first = this.photoURLs.keys().next().value as string | undefined;
+        if (first) {
+          const old = this.photoURLs.get(first);
+          if (old) URL.revokeObjectURL(old);
+          this.photoURLs.delete(first);
+        }
+      }
+      this.photoURLs.set(id, url);
+      return url;
+    } catch {
+      return undefined;
+    }
   }
 
   // ---------- 导出 / 恢复 ----------

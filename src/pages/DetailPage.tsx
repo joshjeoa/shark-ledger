@@ -7,10 +7,12 @@ import { dayKey, monthKey, weekdayLabel, monthLabelCN } from '../utils/date';
 import { toYuan } from '../utils/money';
 import { monthBills, sumByType, categoryTotals } from '../utils/stats';
 import { CatIcon } from '../utils/iconMap';
+import { repo } from '../db/repo';
 import { MonthPicker } from '../components/MonthPicker';
 import { EmptyState } from '../components/EmptyState';
 import { SyncChip } from '../components/SyncChip';
 import { Sheet } from '../components/Sheet';
+import { PhotoViewer } from '../components/PhotoViewer';
 import type { Bill, Category } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -94,6 +96,9 @@ export function DetailPage() {
 
   // 稳定回调：配合 memo(BillRow)，让搜索输入等父组件重渲不再逐行重渲账单列表
   const onTap = useCallback((b: Bill) => openEntry(b), [openEntry]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const onPreview = useCallback((url: string) => setPreviewUrl(url), []);
+  const closePreview = useCallback(() => setPreviewUrl(null), []);
   const onDelete = useCallback(
     async (b: Bill) => {
       const ok = await confirm({ title: '删除这笔记录？', message: '删除后 30 天内可在 设置→数据恢复 中找回', confirmText: '删除', danger: true });
@@ -219,7 +224,7 @@ export function DetailPage() {
                 </div>
                 <div className="bg-card">
                   {items.map((b) => (
-                    <BillRow key={b.id} bill={b} hide={hide} color={colorAmounts} onTap={onTap} onDelete={onDelete} cat={catMap.get(b.categoryId)} />
+                    <BillRow key={b.id} bill={b} hide={hide} color={colorAmounts} onTap={onTap} onDelete={onDelete} onPreview={onPreview} cat={catMap.get(b.categoryId)} />
                   ))}
                 </div>
               </section>
@@ -229,6 +234,8 @@ export function DetailPage() {
       </main>
 
       <MonthPicker open={pickerOpen} value={month} onChange={setMonth} onClose={() => setPickerOpen(false)} />
+
+      {previewUrl && <PhotoViewer url={previewUrl} onClose={closePreview} />}
 
       <Sheet open={ledgerOpen} onClose={() => setLedgerOpen(false)} title="切换账本">
         <div className="px-4 pb-6 space-y-2">
@@ -259,6 +266,7 @@ const BillRow = memo(function BillRow({
   color,
   onTap,
   onDelete,
+  onPreview,
   cat,
 }: {
   bill: Bill;
@@ -266,6 +274,7 @@ const BillRow = memo(function BillRow({
   color: boolean;
   onTap: (b: Bill) => void;
   onDelete: (b: Bill) => void | Promise<void>;
+  onPreview: (url: string) => void;
   cat?: Category;
 }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,6 +293,25 @@ const BillRow = memo(function BillRow({
   // 卸载时清掉未触发的长按计时器：切月/同步刷新导致行消失时不再误弹删除确认
   useEffect(() => stop, []);
   const amountColor = color ? (bill.type === 'expense' ? 'text-danger' : 'text-success') : 'text-ink';
+
+  const photoId = bill.photoIds?.[0];
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(() => (photoId ? repo.photoURL(photoId) : undefined));
+  useEffect(() => {
+    if (!photoId) return;
+    const cached = repo.photoURL(photoId);
+    if (cached) {
+      setPhotoUrl(cached);
+      return;
+    }
+    let alive = true;
+    void repo.loadPhotoURL(photoId).then((u) => {
+      if (alive && u) setPhotoUrl(u);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [photoId]);
+
   return (
     <div
       className="cv-auto flex items-center gap-3 px-4 py-3 border-b border-line no-callout active:bg-surface transition-colors"
@@ -306,6 +334,17 @@ const BillRow = memo(function BillRow({
         <p className="text-sm text-ink truncate">{cat?.name ?? '未分类'}</p>
         {bill.note && <p className="text-xs text-ink-3 truncate">{bill.note}</p>}
       </div>
+      {photoUrl && (
+        <img
+          src={photoUrl}
+          alt="凭证照片"
+          className="w-10 h-10 rounded-lg object-cover shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview(photoUrl);
+          }}
+        />
+      )}
       <span className={`text-base font-medium ${amountColor}`}>
         {bill.type === 'expense' ? '-' : '+'}
         {hide ? '****' : toYuan(bill.amountCents)}
