@@ -38,8 +38,8 @@ export default defineConfig({
         description: '轻量、无广告、可离线、可备份的个人记账工具',
         lang: 'zh-CN',
         display: 'standalone',
-        theme_color: '#F5C518',
-        background_color: '#FFFFFF',
+        theme_color: '#F2F2F7',
+        background_color: '#F2F2F7',
         start_url: '.',
         scope: '.',
         icons: [

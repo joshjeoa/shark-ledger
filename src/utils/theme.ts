@@ -11,8 +11,8 @@ export function resolveTheme(appearance: Appearance): 'light' | 'dark' {
   return appearance;
 }
 
-/** 应用主题到 <html>：class、过渡动画、meta theme-color（状态栏底色） */
-export function applyTheme(appearance: Appearance, themeColor: string): 'light' | 'dark' {
+/** 应用主题到 <html>：class、过渡动画、meta theme-color（状态栏底色 = 中性 header 底色） */
+export function applyTheme(appearance: Appearance): 'light' | 'dark' {
   const resolved = resolveTheme(appearance);
   const root = document.documentElement;
 
@@ -24,9 +24,9 @@ export function applyTheme(appearance: Appearance, themeColor: string): 'light' 
   }
   root.classList.toggle('dark', resolved === 'dark');
 
-  // 状态栏：浅色 = 品牌 header 色；暗色 = 沉浸 header 底色
+  // 状态栏与 header 底色保持一致：浅色 = 系统分组灰，暗色 = 沉浸深色
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#1c1c1e' : themeColor);
+  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#1c1c1e' : '#f2f2f7');
 
   return resolved;
 }

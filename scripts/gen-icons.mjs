@@ -1,7 +1,7 @@
 /**
  * 纯 Node 生成 PWA 图标（无外部依赖）：
  * public/pwa-192.png、public/pwa-512.png、public/apple-touch-icon.png
- * 图案：黄色圆角方块 + 深灰 ¥ 符号（与品牌一致）
+ * 图案：iOS 系统蓝圆角方块 + 白色 ¥ 符号（与品牌一致）
  */
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -56,8 +56,8 @@ function encodePNG(size, rgba) {
 // ---------- 绘图 ----------
 function drawIcon(size, transparentCorners) {
   const px = Buffer.alloc(size * size * 4); // 全透明
-  const bg = [0xf5, 0xc5, 0x18, 0xff]; // #F5C518
-  const fg = [0x1f, 0x29, 0x37, 0xff]; // gray-800
+  const bg = [0x00, 0x7a, 0xff, 0xff]; // #007AFF（iOS 系统蓝）
+  const fg = [0xff, 0xff, 0xff, 0xff]; // 白色 ¥
   const r = size * 0.22;
 
   const inRoundRect = (x, y) => {

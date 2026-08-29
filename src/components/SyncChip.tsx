@@ -6,7 +6,7 @@ export function SyncChip({ onClick }: { onClick?: () => void }) {
   const lastSyncAt = useUI((s) => s.lastSyncAt);
   if (state === 'off') return null;
   const dot =
-    state === 'ok' ? 'bg-green-500' : state === 'error' ? 'bg-red-500' : state === 'syncing' ? 'bg-yellow-500 animate-pulse' : 'bg-muted';
+    state === 'ok' ? 'bg-success' : state === 'error' ? 'bg-danger' : state === 'syncing' ? 'bg-primary animate-pulse' : 'bg-muted';
   const text =
     state === 'ok' && lastSyncAt
       ? `已同步 ${relTime(lastSyncAt)}`

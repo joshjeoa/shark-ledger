@@ -46,15 +46,27 @@ export const useSettings = create<SettingsState>()(
       hideAmount: false,
       defaultType: 'expense',
       colorAmounts: false,
-      themeColor: '#F5C518',
+      themeColor: '#007AFF',
       appearance: 'auto',
       nickname: '我',
       lastCategory: {},
       guideSeen: false,
       set: (p) => set(p),
     }),
-    { name: 'shark-settings', storage: createJSONStorage(() => safeStorage) },
+    {
+      name: 'shark-settings',
+      storage: createJSONStorage(() => safeStorage),
+      version: 1,
+      // v0 默认主题色为黄色 #F5C518：未自定义过的老用户静默迁到新默认蓝；
+      // 自选过的颜色不属于旧默认，保留其选择
+      migrate: (state, version) => {
+        const s = (state ?? {}) as Partial<SettingsState>;
+        if (version < 1 && s.themeColor === '#F5C518') s.themeColor = '#007AFF';
+        return s;
+      },
+    },
   ),
 );
 
-export const THEME_PRESETS = ['#F5C518', '#FF8A3D', '#07C160', '#4C8DF5', '#B06AE0'];
+/** iOS 系统色预设（蓝 / 靛 / 青 / 绿 / 石墨） */
+export const THEME_PRESETS = ['#007AFF', '#5856D6', '#30B0C7', '#34C759', '#8E8E93'];

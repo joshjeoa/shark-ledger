@@ -9,12 +9,13 @@
  * 暗夜模式 = 每个 token 换一套值，而非逐点补丁。
  * ============================================================ */
 :root {
-  --primary: #f5c518;
-  --danger: #e64340;
-  --success: #07c160;
+  /* iOS 系统色 */
+  --primary: #007aff;
+  --danger: #ff3b30;
+  --success: #34c759;
   --muted: #9ca3af;
 
-  /* 中性层 */
+  /* 中性层（iOS systemGray6 背景 + 分组样式） */
   --surface: #f2f2f7; /* 页面底 */
   --card: #ffffff; /* 卡片/浮层 */
   --fill: #e9e9ec; /* 输入框、次级按钮、图标底 */
@@ -25,14 +26,14 @@
   --ink-2: #55555a; /* 次级文字 */
   --ink-3: #8e8e93; /* 三级文字、占位、chevron */
 
-  /* 品牌色上的文字（黄底恒黑） */
-  --on-primary: #14161a;
+  /* 品牌色上的文字 */
+  --on-primary: #ffffff;
 
-  /* Header（浅色 = 品牌色；暗色 = 沉浸深色） */
-  --header-bg: var(--primary);
-  --header-ink: #1f2937;
-  --header-fill: rgba(255, 255, 255, 0.85);
-  --header-fill-ink: #1c1c1e;
+  /* Header（iOS 原生风：中性底，不铺品牌色） */
+  --header-bg: var(--surface);
+  --header-ink: var(--ink);
+  --header-fill: #ffffff;
+  --header-fill-ink: var(--ink);
 
   /* Toast（Apple HUD 风格：暗色模式下反转为浅底深字） */
   --toast-bg: rgba(28, 28, 30, 0.92);
@@ -43,7 +44,7 @@
 }
 
 .dark {
-  --danger: #ff6961;
+  --danger: #ff453a;
   --success: #30d158;
   --muted: #8e8e93;
 
@@ -56,7 +57,7 @@
   --ink-2: #aeaeb2;
   --ink-3: #98989d;
 
-  --on-primary: #14161a;
+  --on-primary: #ffffff;
 
   --header-bg: #1c1c1e;
   --header-ink: #f2f2f7;

@@ -75,9 +75,16 @@ export function AccountPage() {
         toast('请设置新密码');
       },
     });
+    // 自动同步在后台完成时刷新"上次同步"显示
+    const onSynced = () => {
+      setLastSync(lastVaultSyncAt());
+      setLastErr(lastVaultError());
+    };
+    window.addEventListener('vault-synced', onSynced);
     return () => {
       alive = false;
       off();
+      window.removeEventListener('vault-synced', onSynced);
     };
   }, [toast]);
 

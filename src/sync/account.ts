@@ -179,6 +179,7 @@ export async function syncVault(): Promise<VaultSyncResult> {
     const result = await doVaultSync();
     repo.setMeta(LAST_VAULT_SYNC_KEY, Date.now());
     repo.setMeta(LAST_VAULT_ERROR_KEY, null);
+    window.dispatchEvent(new CustomEvent('vault-synced')); // 账号页监听刷新"上次同步"显示
     return result;
   } catch (e) {
     const msg = e instanceof Error ? e.message : '同步失败';

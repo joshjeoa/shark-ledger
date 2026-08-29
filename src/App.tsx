@@ -74,13 +74,13 @@ export default function App() {
   // 主题：品牌色仍写入 --primary（供按钮/图表取用），外观决定整体明暗
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', themeColor);
-    applyTheme(appearance, themeColor);
+    applyTheme(appearance);
   }, [themeColor, appearance]);
 
   // auto 模式下系统明暗变化时实时跟进
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => applyTheme(useSettings.getState().appearance, useSettings.getState().themeColor);
+    const onChange = () => applyTheme(useSettings.getState().appearance);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
