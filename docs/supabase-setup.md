@@ -49,10 +49,13 @@ create policy "vault_delete_own" on public.vaults
 
 ## 二、拿到密钥
 
-**Project Settings → API**：
+**Project Settings → API Keys**（新版界面）：
 
-- `Project URL` → `VITE_SUPABASE_URL`
-- `anon public` key → `VITE_SUPABASE_ANON_KEY`
+- `Project URL` → `VITE_SUPABASE_URL`（Data API 区块，形如 `https://xxxxx.supabase.co`）
+- **Publishable key**（`sb_publishable_...` 开头，可公开）→ `VITE_SUPABASE_ANON_KEY`
+
+> 旧版界面在「Legacy anon, service_role API keys」标签页里，`anon public` key（`eyJ...` 开头）同样可用。
+> **`service_role` / `sb_secret_` 开头的是服务器机密密钥，绝不放进前端配置。**
 
 ## 三、注入构建
 
