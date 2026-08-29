@@ -204,4 +204,7 @@ body {
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.22),
     0 1px 3px rgba(0, 0, 0, 0.15);
+  /* 独立合成层：按压缩放走 GPU 合成，不触发磨砂栏区域重绘（否则低端机明显掉帧） */
+  will-change: transform;
+  transform: translateZ(0);
 }

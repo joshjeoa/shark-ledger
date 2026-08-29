@@ -16,7 +16,8 @@ export function TabBar() {
   return (
     /* 悬浮玻璃栏：脱离屏幕边缘 + 磨砂 + 景深，替代传统通栏 TabBar */
     <nav className="fixed bottom-0 left-0 right-0 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="mx-3 mb-3 rounded-2xl bg-card-glass backdrop-blur-xl border border-line shadow-lg overflow-hidden">
+      {/* 不加 overflow-hidden：FAB 上探出栏体，裁切会切掉上半截并导致按压动画重绘卡顿 */}
+      <div className="mx-3 mb-3 rounded-2xl bg-card-glass backdrop-blur-xl border border-line shadow-lg">
         <div className="grid grid-cols-5 h-14 items-center">
           {tabs.slice(0, 2).map((t) => (
             <TabItem key={t.to} {...t} />
