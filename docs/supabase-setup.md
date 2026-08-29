@@ -87,7 +87,22 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 - 记一笔后约 5 秒自动同步；网络恢复时补跑；凭证照片不参与云同步（体积原因，仅存本机）。
 - 「删除云端数据」仅删除云端快照行，本机数据不动。
 
-## 五、故障排查
+## 五、国内网络直连不通怎么办（重要）
+
+国内部分 ISP/校园网对 `*.supabase.co` 做 DNS 污染（症状：官网能打开，但应用里登录/注册提示「网络连接失败」，
+`nslookup 你的项目ref.supabase.co` 返回 Non-existent domain）。解决：用 Cloudflare Worker 反向代理（免费）：
+
+1. 注册/登录 [dash.cloudflare.com](https://dash.cloudflare.com)
+2. **Workers & Pages → Create application → Create Worker**，名字随意（如 `shark-supabase`）→ Deploy
+3. **Edit code** → 清空示例，粘贴仓库文件 `deploy/supabase-proxy-worker.js` 的全部内容（把里面的
+   `UPSTREAM_HOST` 保持为你的项目域名）→ **Deploy**
+4. 回 Worker 概览页拿到访问域名（形如 `shark-supabase.xxx.workers.dev`）
+5. 把 `VITE_SUPABASE_URL` 改为 `https://shark-supabase.xxx.workers.dev`，重新构建
+
+说明：Worker 只做透明转发，数据在客户端已加密；若 `workers.dev` 域名在你所在网络也不通，
+需要在 Cloudflare 给 Worker 绑定自己的自定义域名（需一个托管在 Cloudflare 的域名）。
+
+## 六、故障排查
 
 | 现象 | 原因/处理 |
 | --- | --- |
