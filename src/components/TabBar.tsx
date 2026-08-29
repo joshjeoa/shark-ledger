@@ -14,23 +14,26 @@ export function TabBar() {
   const location = useLocation();
   if (location.pathname.startsWith('/settings')) return null;
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-line z-30 pb-safe">
-      <div className="grid grid-cols-5 h-14 items-center">
-        {tabs.slice(0, 2).map((t) => (
-          <TabItem key={t.to} {...t} />
-        ))}
-        <div className="flex justify-center">
-          <button
-            aria-label="记一笔"
-            className="w-14 h-14 -mt-6 rounded-full text-on-primary flex items-center justify-center active:scale-95 transition-transform tab-fab"
-            onClick={() => openEntry(null)}
-          >
-            <Plus size={28} strokeWidth={2.4} />
-          </button>
+    /* 悬浮玻璃栏：脱离屏幕边缘 + 磨砂 + 景深，替代传统通栏 TabBar */
+    <nav className="fixed bottom-0 left-0 right-0 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="mx-3 mb-3 rounded-2xl bg-card-glass backdrop-blur-xl border border-line shadow-lg overflow-hidden">
+        <div className="grid grid-cols-5 h-14 items-center">
+          {tabs.slice(0, 2).map((t) => (
+            <TabItem key={t.to} {...t} />
+          ))}
+          <div className="flex justify-center">
+            <button
+              aria-label="记一笔"
+              className="w-14 h-14 -mt-7 rounded-full text-on-primary flex items-center justify-center active:scale-95 transition-transform tab-fab"
+              onClick={() => openEntry(null)}
+            >
+              <Plus size={28} strokeWidth={2.4} />
+            </button>
+          </div>
+          {tabs.slice(2).map((t) => (
+            <TabItem key={t.to} {...t} />
+          ))}
         </div>
-        {tabs.slice(2).map((t) => (
-          <TabItem key={t.to} {...t} />
-        ))}
       </div>
     </nav>
   );

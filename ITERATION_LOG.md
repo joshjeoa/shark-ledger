@@ -4,6 +4,51 @@
 
 ---
 
+## [v1.6.0 - 2026-08-29] - UI 换装：暗色金融风（深炭 + 香槟金）
+
+### 📝 更新详情
+- 🎨 **视觉 (Changed):**
+  - **配色体系整体重写**：暗色 = 蓝黑炭阶（#0B0E13 底 / #151A23 卡片 / 发丝分隔线 rgba 白 8%）+ 香槟金点缀（#E4C066）；浅色 = 暖象牙纸感（#F7F5F0 底）+ 深鎏金（#A8801F）。金色系按钮明暗两种模式统一配深色文字（--on-primary），保证可读性
+  - **质感层**：全局 `font-variant-numeric: tabular-nums`（金额数字等宽对齐）；`.rounded-2xl.bg-card` 统一悬浮阴影 + 发丝描边（暗色靠描边分层，阴影收敛）
+  - **TabBar 悬浮玻璃栏**：脱离屏幕边缘（两侧 12px + 底部安全区）、磨砂（backdrop-blur 24px + 88% 卡片玻璃底）、圆角 16px + 景深；记一笔 FAB 上浮呼应；四个主页面底部留白 pb-24 → pb-28 适配
+  - **主题色预设换血**：iOS 系统色 → 金/铂/玉/玫瑰/雾蓝五个低饱和点缀色；settings persist 版本 1→2，历次换肤的旧默认色（#F5C518、#007AFF）静默迁移到香槟金，用户自选色保留
+  - 状态栏（theme-color meta）与 PWA manifest 配色同步：深炭 #0B0E13 / 暖纸 #F7F5F0
+- 📌 **说明 (Notes):**
+  - 全部改动走语义 token，组件层仅 TabBar 结构调整，明暗/auto 三种外观均可用；图表取色自 CSS 变量自动跟随
+  - 取代 v1.5.1 的 iOS 蓝方向（用户反馈「不够高级」，经方向确认选择暗色金融风）
+- ✅ **验证 (Verified):**
+  - DOM 校验：暗色下 --primary=#E4C066 / --surface=#0B0E13 / TabBar 磨砂圆角玻璃底 / 卡片发丝描边 + 阴影 / 主题色迁移后金色预设选中态正确
+  - 浅色模式回归：暖象牙底生效、金色按钮深字对比度修复
+  - `tsc --noEmit` strict + 构建通过
+
+### 🎯 待办与下一步 (TODO)
+- [ ] 账号通道用户侧收尾：设置数据口令 + 再次同步使云端密文化
+- [ ] 图表卡片化、收入构成环形图等进一步视觉升级（可选）
+- [ ] **自动同步仍是单向整文件覆盖（Gist/WebDAV 通道）**：账号通道已用合并策略解决
+- [ ] bills 的 `byUpdated` 索引确认用或删；`FullDump` 不含 settings（规格 §5.6）
+- [ ] README Roadmap：标签系统、多币种、周期记账、资产管家
+
+---
+
+## [v1.5.1 - 2026-08-29] - 全局配色改版：黄色品牌色 → Apple 原生风 iOS 系统色
+
+### 📝 更新详情
+- ♻️ **优化 (Changed):**
+  - **主色**：`--primary` 由鲨鱼黄 `#F5C518` 改为 iOS 系统蓝 `#007AFF`（暗色下同名值，PWA 主题色跟随设置）；`--danger`/`--success` 同步换 iOS 系统红 `#FF3B30`（暗色 `#FF453A`）/ 绿 `#34C759`（暗色 `#30D158`），收入支出红绿配色一并归位 iOS 语义色
+  - **Header 去品牌大色块**：浅色模式页头由品牌色铺底改为中性分组灰 `#F2F2F7`（`--header-bg: var(--surface)`），`--header-fill` 改纯白胶囊——对照 iOS 原生（设置/图表页分段控件观感）；暗色维持 `#1C1C1E` 沉浸式不变
+  - **主题预设**：`THEME_PRESETS` 换为 5 个 iOS 系统色（蓝 `#007AFF` / 靛 `#5856D6` / 青 `#30B0C7` / 绿 `#34C759` / 石墨 `#8E8E93`）；`--on-primary` 恒白
+  - **状态栏/PWA**：meta theme-color 与 manifest `theme_color`/`background_color` 改中性灰（与页头一致，不再随主题色）；favicon（SVG data URI）与 PWA 图标经 `scripts/gen-icons.mjs` 重新生成为蓝底白 ¥
+  - **SyncChip**：状态点硬编码 tailwind 色（`bg-green-500`/`bg-red-500`/`bg-yellow-500`）换成语义 token（`bg-success`/`bg-danger`/`bg-primary`），全项目回到"禁止硬编码颜色类"约定
+- 📌 **设计决策 (Decisions):**
+  - 配色只动品牌层、不动中性层：surface/card/fill/line/ink 本就是 iOS systemGray6/label 体系，保持不动使改动聚焦且零布局风险
+  - 老用户迁移：settings persist 引入 `version: 1`，localStorage 里仍是旧默认 `#F5C518` 的静默迁到 `#007AFF`；自选过其他颜色的用户保留原选择
+- ✅ **验证 (Verified):**
+  - `npm run build` 通过（tsc strict + vite + PWA 产物）
+  - 浏览器实测（Vite dev + 390×844 视口）：亮/暗双主题下明细、图表、设置、记一笔弹层全部无黄色残留；图表 周/月 分段控件、折线、排行榜进度条均呈 iOS 蓝；迁移逻辑实测（写入 v0 黄色配置 → 刷新自动变蓝）；DOM 实测无横向溢出
+  - `--primary`/`--header-bg` 计算样式断言：`#007AFF` / `#f2f2f7`
+
+---
+
 ## [v1.5.0 - 2026-08-29] - 账号模式：Supabase 邮箱认证 + 加密云保险库同步
 
 ### 📝 更新详情

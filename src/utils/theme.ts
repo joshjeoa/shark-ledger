@@ -24,9 +24,9 @@ export function applyTheme(appearance: Appearance): 'light' | 'dark' {
   }
   root.classList.toggle('dark', resolved === 'dark');
 
-  // 状态栏与 header 底色保持一致：浅色 = 系统分组灰，暗色 = 沉浸深色
+  // 状态栏与 header 底色保持一致：浅色 = 暖象牙纸底，暗色 = 深炭底
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#1c1c1e' : '#f2f2f7');
+  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#0b0e13' : '#f7f5f0');
 
   return resolved;
 }

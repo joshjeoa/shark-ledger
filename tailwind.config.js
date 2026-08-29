@@ -26,6 +26,8 @@ export default {
         'toast-bg': 'var(--toast-bg)',
         'toast-ink': 'var(--toast-ink)',
         scrim: 'var(--scrim)',
+        // 悬浮磨砂层（TabBar）
+        'card-glass': 'var(--card-glass)',
       },
     },
   },

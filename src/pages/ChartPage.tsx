@@ -228,7 +228,7 @@ export function ChartPage() {
         ))}
       </div>
 
-      <main className="flex-1 overflow-auto pb-24">
+      <main className="flex-1 overflow-auto pb-28">
         <div className="bg-card px-4 pt-3">
           <p className="text-sm text-ink-2">
             总{metric === 'expense' ? '支出' : '收入'}：{show(model.total)}

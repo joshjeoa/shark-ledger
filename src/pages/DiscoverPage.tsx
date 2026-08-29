@@ -98,7 +98,7 @@ export function DiscoverPage() {
   const momText = insight.mom === null ? '上月无记录' : `${insight.mom > 0 ? '+' : ''}${insight.mom}%`;
 
   return (
-    <div className="h-full overflow-auto bg-surface pb-24">
+    <div className="h-full overflow-auto bg-surface pb-28">
       <header className="bg-header pt-safe">
         <h1 className="text-center text-lg font-bold py-4">发现</h1>
       </header>

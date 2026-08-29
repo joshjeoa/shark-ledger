@@ -204,7 +204,7 @@ export function DetailPage() {
       )}
 
       {/* 列表 */}
-      <main className="flex-1 overflow-auto bg-surface rounded-t-2xl -mt-2 relative pb-24">
+      <main className="flex-1 overflow-auto bg-surface rounded-t-2xl -mt-2 relative pb-28">
         {groups.length === 0 ? (
           <EmptyState text={query ? '没有找到相关账单' : '开始记第一笔吧'} actionLabel={query ? undefined : '记一笔'} onAction={() => openEntry(null)} />
         ) : (

@@ -3,71 +3,80 @@
 @tailwind utilities;
 
 /* ============================================================
- * 语义色板（iOS HIG 风格）
+ * 语义色板（暗色金融风：深炭 + 香槟金）
  * 全项目禁止再写 bg-white / text-gray-* 等硬编码颜色类，
  * 一律使用语义 token：surface / card / fill / line / ink / header…
  * 暗夜模式 = 每个 token 换一套值，而非逐点补丁。
  * ============================================================ */
 :root {
-  /* iOS 系统色 */
-  --primary: #007aff;
-  --danger: #ff3b30;
-  --success: #34c759;
+  /* 浅色 = 暖象牙纸感，金色作点缀（深鎏金保证浅底可读） */
+  --primary: #a8801f;
+  --danger: #d64545;
+  --success: #1e9e6a;
   --muted: #9ca3af;
 
-  /* 中性层（iOS systemGray6 背景 + 分组样式） */
-  --surface: #f2f2f7; /* 页面底 */
+  /* 中性层 */
+  --surface: #f7f5f0; /* 页面底 */
   --card: #ffffff; /* 卡片/浮层 */
-  --fill: #e9e9ec; /* 输入框、次级按钮、图标底 */
-  --line: #e5e5ea; /* 分隔线、描边 */
+  --fill: #f0ede5; /* 输入框、次级按钮、图标底 */
+  --line: #e8e4da; /* 分隔线、描边 */
 
-  /* 文字 */
-  --ink: #1c1c1e; /* 主文字 */
-  --ink-2: #55555a; /* 次级文字 */
-  --ink-3: #8e8e93; /* 三级文字、占位、chevron */
+  /* 文字：暖黑 */
+  --ink: #1e1c18; /* 主文字 */
+  --ink-2: #5c594f; /* 次级文字 */
+  --ink-3: #8f8c82; /* 三级文字、占位、chevron */
 
-  /* 品牌色上的文字 */
-  --on-primary: #ffffff;
+  /* 品牌色上的文字（金色系底统一配深字，明暗两种模式都可读） */
+  --on-primary: #221c08;
 
-  /* Header（iOS 原生风：中性底，不铺品牌色） */
+  /* Header（沉浸暖纸底） */
   --header-bg: var(--surface);
   --header-ink: var(--ink);
   --header-fill: #ffffff;
   --header-fill-ink: var(--ink);
 
   /* Toast（Apple HUD 风格：暗色模式下反转为浅底深字） */
-  --toast-bg: rgba(28, 28, 30, 0.92);
-  --toast-ink: #ffffff;
+  --toast-bg: rgba(30, 28, 24, 0.92);
+  --toast-ink: #fffdf7;
 
   /* 遮罩 */
-  --scrim: rgba(0, 0, 0, 0.4);
+  --scrim: rgba(20, 18, 14, 0.5);
+
+  /* 悬浮元素（TabBar 磨砂底） */
+  --card-glass: rgba(255, 255, 255, 0.88);
 }
 
 .dark {
-  --danger: #ff453a;
-  --success: #30d158;
-  --muted: #8e8e93;
+  /* 暗色金融风：深炭 + 香槟金 */
+  --primary: #e4c066;
+  --danger: #ff6b6b;
+  --success: #43d9a3;
+  --muted: #8b93a5;
 
-  --surface: #000000;
-  --card: #1c1c1e;
-  --fill: #2c2c2e;
-  --line: #38383a;
+  /* 中性层：蓝黑炭阶 */
+  --surface: #0b0e13; /* 页面底 */
+  --card: #151a23; /* 卡片/浮层 */
+  --fill: #1f2632; /* 输入框、次级按钮、图标底 */
+  --line: rgba(255, 255, 255, 0.08); /* 发丝分隔线 */
 
-  --ink: #f2f2f7;
-  --ink-2: #aeaeb2;
-  --ink-3: #98989d;
+  /* 文字 */
+  --ink: #f0f3f8; /* 主文字 */
+  --ink-2: #a3acbc; /* 次级文字 */
+  --ink-3: #6e7787; /* 三级文字、占位、chevron */
 
-  --on-primary: #ffffff;
+  --on-primary: #231a05; /* 金色底配深字 */
 
-  --header-bg: #1c1c1e;
-  --header-ink: #f2f2f7;
-  --header-fill: rgba(255, 255, 255, 0.12);
-  --header-fill-ink: #f2f2f7;
+  --header-bg: var(--surface);
+  --header-ink: var(--ink);
+  --header-fill: rgba(255, 255, 255, 0.05);
+  --header-fill-ink: var(--ink);
 
-  --toast-bg: rgba(242, 242, 247, 0.95);
-  --toast-ink: #1c1c1e;
+  --toast-bg: rgba(22, 27, 36, 0.96);
+  --toast-ink: #f0f3f8;
 
-  --scrim: rgba(0, 0, 0, 0.6);
+  --scrim: rgba(0, 0, 0, 0.65);
+
+  --card-glass: rgba(21, 26, 35, 0.88);
 }
 
 html,
@@ -83,10 +92,25 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   color-scheme: light;
+  /* 账本类应用数字对齐关键：全局等宽数字（金额列不跳动） */
+  font-variant-numeric: tabular-nums;
 }
 
 .dark body {
   color-scheme: dark;
+}
+
+/* 卡片景深：大圆角卡片统一悬浮阴影 + 发丝描边（暗色下描边承担层次，阴影收敛） */
+.rounded-2xl.bg-card {
+  border: 1px solid var(--line);
+  box-shadow:
+    0 1px 2px rgba(16, 20, 28, 0.05),
+    0 10px 30px rgba(16, 20, 28, 0.07);
+}
+.dark .rounded-2xl.bg-card {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 /* 主题切换时的全局渐变：仅在切换瞬间挂载 350ms，避免影响日常交互 */

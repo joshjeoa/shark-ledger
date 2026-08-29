@@ -21,7 +21,7 @@ export function MinePage() {
   }, [bills]);
 
   return (
-    <div className="h-full overflow-auto bg-surface pb-24">
+    <div className="h-full overflow-auto bg-surface pb-28">
       <header className="bg-header pt-safe">
         <div className="px-4 pt-6 pb-8">
           <div className="flex items-center gap-3">
