@@ -23,14 +23,31 @@ export function isStandalone(): boolean {
   return nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 }
 
-/** iOS <15.4 不支持 dvh：用 JS 变量兜底主布局高度 */
+/** iOS <15.4 不支持 dvh：用 JS 变量兜底主布局高度。
+ * 键盘弹出策略与原生 App 一致：布局高度保持不变、键盘悬浮覆盖（页面不上移）。
+ * 视口高度骤降（>12%）视为键盘弹出，忽略该次收缩；工具栏收起等小幅变化正常跟随。 */
 export function setupAppHeight(): void {
-  const set = () => {
-    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+  let full = window.innerHeight;
+  const apply = (h: number) => {
+    full = h;
+    document.documentElement.style.setProperty('--app-height', `${h}px`);
   };
-  set();
-  window.addEventListener('resize', set);
-  window.addEventListener('orientationchange', set);
+  apply(full);
+  window.addEventListener('resize', () => {
+    const h = window.innerHeight;
+    if (h < full * 0.88) return; // 键盘弹出，布局不动
+    apply(h);
+  });
+  window.addEventListener('orientationchange', () => setTimeout(() => apply(window.innerHeight), 120));
+
+  // iOS 键盘弹出时会把整个视口（含 fixed 头部）向上平移：
+  // 聚焦/失焦/视口变化后把窗口滚动锁回原位，实现"界面原地不动，只有键盘升起"
+  const lock = () => {
+    if (window.scrollY !== 0) window.scrollTo(0, 0);
+  };
+  window.addEventListener('focusin', () => setTimeout(lock, 80));
+  window.addEventListener('focusout', () => setTimeout(lock, 80));
+  window.visualViewport?.addEventListener('resize', lock);
 }
 
 export function b64encode(buf: ArrayBuffer | Uint8Array): string {

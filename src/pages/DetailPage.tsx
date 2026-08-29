@@ -13,12 +13,13 @@ import { EmptyState } from '../components/EmptyState';
 import { SyncChip } from '../components/SyncChip';
 import { Sheet } from '../components/Sheet';
 import { PhotoViewer } from '../components/PhotoViewer';
-import type { Bill, Category } from '../types';
+import type { Bill, Category, Account } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export function DetailPage() {
   const bills = useData((s) => s.bills);
   const categories = useData((s) => s.categories);
+  const accounts = useData((s) => s.accounts);
   const ledgers = useData((s) => s.ledgers);
   const currentLedgerId = useData((s) => s.currentLedgerId);
   const setCurrentLedger = useData((s) => s.setCurrentLedger);
@@ -47,6 +48,8 @@ export function DetailPage() {
 
   // 分类 id → 对象索引，避免过滤/渲染时对每条账单做线性 find
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  // 账户 id → 对象索引（账单行第二行显示支付账户）
+  const accMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
   const sums = useMemo(() => sumByType(monthBillList), [monthBillList]);
 
@@ -224,7 +227,7 @@ export function DetailPage() {
                 </div>
                 <div className="bg-card">
                   {items.map((b) => (
-                    <BillRow key={b.id} bill={b} hide={hide} color={colorAmounts} onTap={onTap} onDelete={onDelete} onPreview={onPreview} cat={catMap.get(b.categoryId)} />
+                    <BillRow key={b.id} bill={b} hide={hide} color={colorAmounts} onTap={onTap} onDelete={onDelete} onPreview={onPreview} cat={catMap.get(b.categoryId)} account={b.accountId ? accMap.get(b.accountId) : undefined} />
                   ))}
                 </div>
               </section>
@@ -268,6 +271,7 @@ const BillRow = memo(function BillRow({
   onDelete,
   onPreview,
   cat,
+  account,
 }: {
   bill: Bill;
   hide: boolean;
@@ -276,6 +280,7 @@ const BillRow = memo(function BillRow({
   onDelete: (b: Bill) => void | Promise<void>;
   onPreview: (url: string) => void;
   cat?: Category;
+  account?: Account;
 }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
@@ -332,7 +337,13 @@ const BillRow = memo(function BillRow({
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-ink truncate">{cat?.name ?? '未分类'}</p>
-        {bill.note && <p className="text-xs text-ink-3 truncate">{bill.note}</p>}
+        {(bill.note || account) && (
+          <p className="text-xs truncate">
+            {/* 备注是重点（次级深一档），支付账户用括号弱化区分 */}
+            {bill.note && <span className="text-ink-2">{bill.note}</span>}
+            {account && <span className="text-ink-3">{bill.note ? `（${account.name}）` : account.name}</span>}
+          </p>
+        )}
       </div>
       {photoUrl && (
         <img
