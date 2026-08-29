@@ -153,6 +153,16 @@ body {
   scrollbar-width: none;
 }
 
+/* iOS Safari：聚焦 font-size < 16px 的输入框会自动放大整个页面。
+   仅 iOS 下把输入类元素统一到 16px 阈值（其他平台保留原设计字号） */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* 长列表跳过渲染：视口外的行不参与布局/绘制（contain-intrinsic-size: auto 会记住上次实际高度，滚动无跳动） */
 .cv-auto {
   content-visibility: auto;
