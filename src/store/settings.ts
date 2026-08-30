@@ -12,6 +12,8 @@ interface SettingsState {
   nickname: string;
   lastCategory: Partial<Record<BillType, string>>;
   guideSeen: boolean;
+  /** 照片云同步自动上传（Pro 功能；依赖账号体系，见 src/vip/photoCloud.ts） */
+  photoCloudAuto: boolean;
   set: (p: Partial<Omit<SettingsState, 'set'>>) => void;
 }
 
@@ -51,6 +53,7 @@ export const useSettings = create<SettingsState>()(
       nickname: '我',
       lastCategory: {},
       guideSeen: false,
+      photoCloudAuto: false,
       set: (p) => set(p),
     }),
     {

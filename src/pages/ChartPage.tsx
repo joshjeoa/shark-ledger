@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../store/data';
 import { useSettings } from '../store/settings';
 import { useTheme } from '../utils/theme';
@@ -7,6 +8,8 @@ import { toYuan } from '../utils/money';
 import { ledgerBills, sumByType } from '../utils/stats';
 import { CatIcon } from '../utils/iconMap';
 import { EmptyState } from '../components/EmptyState';
+import { ProGateButton } from '../vip/ProGate';
+import { Crown } from 'lucide-react';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import type { Bill, BillType } from '../types';
 import type { Chart, ChartOptions, Plugin, TooltipItem } from 'chart.js';
@@ -179,6 +182,7 @@ export function ChartPage() {
   const currentLedgerId = useData((s) => s.currentLedgerId);
   const hide = useSettings((s) => s.hideAmount);
   const theme = useTheme();
+  const navigate = useNavigate();
   const [metric, setMetric] = useState<BillType>('expense');
   const [period, setPeriod] = useState<Period>('week');
   const [offset, setOffset] = useState(0);
@@ -457,11 +461,20 @@ export function ChartPage() {
     <div className="h-full flex flex-col bg-surface">
       <header className="bg-header pt-safe">
         <div className="px-4 pt-2 pb-3">
-          <div className="flex items-center justify-center gap-2">
+          <div className="relative flex items-center justify-center gap-2">
             <select value={metric} onChange={(e) => setMetric(e.target.value as BillType)} className="bg-transparent font-bold text-lg outline-none appearance-none text-center text-header-ink">
               <option value="expense">支出</option>
               <option value="income">收入</option>
             </select>
+            <ProGateButton
+              feature="年度报告"
+              ariaLabel="年度报告"
+              className="absolute right-0 flex items-center gap-1 text-sm text-header-ink px-3 py-1.5 rounded-full bg-header-fill"
+              onProceed={() => navigate('/report')}
+            >
+              <Crown size={15} className="text-primary" />
+              年报
+            </ProGateButton>
           </div>
           <div className="grid grid-cols-3 mt-3 rounded-lg overflow-hidden bg-header-fill text-sm text-center">
             {(['week', 'month', 'year'] as Period[]).map((p) => (

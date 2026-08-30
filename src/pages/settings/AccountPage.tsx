@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { CloudUpload, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
-import { SettingsShell } from './SettingsShell';
+import { CloudUpload, Crown, Download, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
+import { SettingsShell, Toggle } from './SettingsShell';
 import { useUI } from '../../store/ui';
+import { useSettings } from '../../store/settings';
+import { usePro } from '../../vip/entitlement';
+import { UpgradeSheet } from '../../vip/ProGate';
+import type { PhotoCloudStats } from '../../vip/photoCloud';
 import {
   deleteVault,
   getVaultPass,
@@ -305,6 +309,9 @@ export function AccountPage() {
             </p>
           </div>
 
+          {/* 照片云同步（Pro） */}
+          <PhotoCloudCard />
+
           <div className="bg-card rounded-2xl divide-y divide-line">
             <button className="w-full flex items-center gap-2 px-4 py-3.5 text-left" onClick={() => void doSignOut()}>
               <LogOut size={18} className="text-ink-3" />
@@ -315,10 +322,125 @@ export function AccountPage() {
               <span className="flex-1 text-sm text-danger">删除云端数据</span>
             </button>
           </div>
-          <p className="px-1 pb-2 text-[11px] text-ink-3 leading-relaxed">凭证照片体积较大，暂不参与云端同步（仅保存在本机）。如需迁移请使用 设置 → 数据 的 JSON 导出。</p>
         </div>
       )}
     </SettingsShell>
+  );
+}
+
+/** 照片云同步（Pro）：本地 IndexedDB ↔ Supabase Storage（私有桶，按用户隔离）。
+ * 照片为明文原图（已压缩），依赖存储桶 RLS 只允许本人读写；口令加密不适用二进制通道。 */
+function PhotoCloudCard() {
+  const toast = useUI((s) => s.toast);
+  const pro = usePro();
+  const photoCloudAuto = useSettings((s) => s.photoCloudAuto);
+  const setSettings = useSettings((s) => s.set);
+  const [stats, setStats] = useState<PhotoCloudStats | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<'upload' | 'download' | null>(null);
+  const [progress, setProgress] = useState('');
+  const [upsellOpen, setUpsellOpen] = useState(false);
+
+  const reload = () => {
+    void import('../../vip/photoCloud').then(async (m) => {
+      try {
+        setStats(await m.photoCloudStats());
+        setLoadErr(null);
+      } catch (e) {
+        setLoadErr(e instanceof Error ? e.message : '读取失败');
+      }
+    });
+  };
+  useEffect(() => {
+    reload();
+  }, []);
+
+  const run = (kind: 'upload' | 'download') => {
+    if (busy) return;
+    setBusy(kind);
+    setProgress('');
+    void import('../../vip/photoCloud').then(async (m) => {
+      try {
+        const onProgress = (done: number, total: number) => setProgress(total > 0 ? ` ${done}/${total}` : '');
+        const r = kind === 'upload' ? await m.uploadAllPhotos(onProgress) : await m.downloadMissingPhotos(onProgress);
+        const failNote = r.failed ? `，失败 ${r.failed}` : '';
+        toast(kind === 'upload' ? `上传完成：${r.transferred} 张${failNote}` : `下载完成：恢复 ${r.transferred} 张${failNote}`, r.failed ? 'err' : 'ok');
+        setStats(await m.photoCloudStats());
+      } catch (e) {
+        toast(e instanceof Error ? e.message : '操作失败', 'err');
+        reload();
+      } finally {
+        setBusy(null);
+        setProgress('');
+      }
+    });
+  };
+
+  return (
+    <div className="bg-card rounded-2xl p-4 space-y-3">
+      <h2 className="text-sm font-medium flex items-center gap-1.5">
+        <Crown size={16} className="text-primary" /> 照片云同步
+        <span className="text-[10px] text-on-primary bg-primary rounded-full px-1.5 py-0.5 font-medium">Pro</span>
+      </h2>
+
+      {!pro ? (
+        <>
+          <p className="text-xs text-ink-3 leading-relaxed">凭证照片跨设备云备份：换手机登录同一账号即可找回全部凭证照。</p>
+          <button className="w-full h-10 rounded-xl bg-fill text-sm text-ink font-medium flex items-center justify-center gap-1.5" onClick={() => setUpsellOpen(true)}>
+            <Crown size={14} className="text-primary" /> 开通后使用
+          </button>
+          <UpgradeSheet open={upsellOpen} onClose={() => setUpsellOpen(false)} feature="照片云同步" />
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-ink-3 leading-relaxed">
+            照片上传到你的私有存储空间（仅本人可读），本地数据不受影响。上传为明文原图（已压缩），不含账单金额。
+          </p>
+          {loadErr ? (
+            <p className="text-xs text-danger">读取失败：{loadErr}</p>
+          ) : stats ? (
+            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+              <div className="bg-fill rounded-xl p-2.5">
+                <p className="text-xs text-ink-3 mb-0.5">本机</p>
+                <b className="tabular-nums">{stats.localCount}</b>
+              </div>
+              <div className="bg-fill rounded-xl p-2.5">
+                <p className="text-xs text-ink-3 mb-0.5">云端</p>
+                <b className="tabular-nums">{stats.cloudCount}</b>
+              </div>
+              <div className="bg-fill rounded-xl p-2.5">
+                <p className="text-xs text-ink-3 mb-0.5">待上传</p>
+                <b className="tabular-nums">{stats.pendingCount}</b>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center py-2 text-ink-3">
+              <Loader2 size={18} className="animate-spin" />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <button disabled={busy !== null || !stats} className="h-10 rounded-xl bg-fill text-sm text-ink-2 flex items-center justify-center gap-1.5 disabled:opacity-60" onClick={() => run('upload')}>
+              {busy === 'upload' ? <Loader2 size={15} className="animate-spin" /> : <CloudUpload size={15} />}
+              {busy === 'upload' ? `上传中${progress}` : '上传照片'}
+            </button>
+            <button disabled={busy !== null || !stats} className="h-10 rounded-xl bg-fill text-sm text-ink-2 flex items-center justify-center gap-1.5 disabled:opacity-60" onClick={() => run('download')}>
+              {busy === 'download' ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+              {busy === 'download' ? `下载中${progress}` : '下载到本机'}
+            </button>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-xs text-ink-2">自动上传新照片（随账单同步）</span>
+            <Toggle
+              on={photoCloudAuto}
+              onChange={(v) => {
+                setSettings({ photoCloudAuto: v });
+                toast(v ? '已开启：记一笔后自动上传新照片' : '已关闭自动上传');
+              }}
+            />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

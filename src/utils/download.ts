@@ -1,6 +1,10 @@
 /** 下载：桌面 Chromium 用 showSaveFilePicker，iOS Safari 一律 <a download> */
 export async function downloadFile(name: string, content: string, mime: string): Promise<void> {
-  const blob = new Blob([content], { type: mime });
+  await downloadBlob(name, new Blob([content], { type: mime }));
+}
+
+/** Blob 下载（年报分享卡片等二进制产物）；桌面走文件选择器，iOS 仍走 <a download> */
+export async function downloadBlob(name: string, blob: Blob): Promise<void> {
   const w = window as Window & {
     showSaveFilePicker?: (opts: unknown) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }>;
   };

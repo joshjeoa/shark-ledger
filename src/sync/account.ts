@@ -45,6 +45,11 @@ function getSupabase(): Promise<SupabaseClient> {
   return clientPromise;
 }
 
+/** 共享客户端：vip 权益层/照片云同步复用同一实例（必须先通过 isAccountConfigured() 检查） */
+export function getSharedSupabase(): Promise<SupabaseClient> {
+  return getSupabase();
+}
+
 // ---------- 认证 ----------
 
 /** 认证错误 → 用户可读的中文提示（不泄露"邮箱是否存在"以外的服务端细节） */

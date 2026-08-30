@@ -111,3 +111,13 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 | 同步报「云端数据已加密，请先输入数据口令」 | 换设备后首次同步，填入原设备设置的数据口令 |
 | 同步报「口令错误，无法解密备份」 | 数据口令与加密时不一致 |
 | 找回密码邮件链接打不开应用 | Site URL 未配置为部署地址 |
+
+## 七、鲨鱼 Pro（VIP）需要的额外 SQL
+
+兑换码体系（`licenses` / `pro_entitlements` / `redeem_license` RPC）与照片云同步存储桶
+（Storage 私有桶 `photos` + RLS）的建表语句见 **`docs/VIP功能方案.md` §2.1**，同样在 SQL Editor
+中一次性执行（全部写成可重复执行）。执行后：
+
+- 设置 → 鲨鱼 Pro → 输入测试码 `SHARK-TEST-2026`（年卡）/ `SHARK-TEST-LIFETIME`（永久）即可开通；
+  **正式运营前删除测试码**（`delete from licenses where code like 'SHARK-TEST-%';`）。
+- 生成正式兑换码：`select gen_license('yearly', 365, '订单备注');`

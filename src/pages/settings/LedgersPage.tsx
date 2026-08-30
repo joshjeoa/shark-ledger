@@ -5,6 +5,11 @@ import { useData } from '../../store/data';
 import { useUI } from '../../store/ui';
 import { Sheet } from '../../components/Sheet';
 import { uuid } from '../../utils/compat';
+import { usePro } from '../../vip/entitlement';
+import { UpgradeSheet } from '../../vip/ProGate';
+
+/** 免费版账本数量上限：只拦截"新建"，已有账本（含历史遗留超限）不受影响 */
+const FREE_LEDGER_LIMIT = 2;
 
 export function LedgersPage() {
   const ledgers = useData((s) => s.ledgers);
@@ -12,9 +17,11 @@ export function LedgersPage() {
   const setCurrentLedger = useData((s) => s.setCurrentLedger);
   const upsertLedger = useData((s) => s.upsertLedger);
   const toast = useUI((s) => s.toast);
+  const pro = usePro();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [upsellOpen, setUpsellOpen] = useState(false);
 
   const save = async () => {
     const n = name.trim();
@@ -23,6 +30,11 @@ export function LedgersPage() {
       const l = ledgers.find((x) => x.id === editingId);
       if (l) await upsertLedger({ ...l, name: n });
     } else {
+      if (!pro && ledgers.length >= FREE_LEDGER_LIMIT) {
+        setOpen(false);
+        setUpsellOpen(true);
+        return;
+      }
       const l = { id: uuid(), name: n, builtin: false };
       await upsertLedger(l);
     }
@@ -79,6 +91,8 @@ export function LedgersPage() {
           </button>
         </div>
       </Sheet>
+
+      <UpgradeSheet open={upsellOpen} onClose={() => setUpsellOpen(false)} feature={`第 ${FREE_LEDGER_LIMIT + 1} 个账本`} />
     </SettingsShell>
   );
 }

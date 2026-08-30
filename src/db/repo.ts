@@ -412,6 +412,27 @@ class Repo {
     return this.photoURLs.get(id);
   }
 
+  /** 全量照片记录（照片云同步用：上传清单 / 下载去重） */
+  async allPhotos(): Promise<Photo[]> {
+    if (!this.photoReady) return [];
+    try {
+      return (await this.db!.getAll('photos')) as Photo[];
+    } catch {
+      return [];
+    }
+  }
+
+  /** 云端回落：按已知 id/billId 写入照片记录（下载去重后调用，幂等） */
+  async importCloudPhoto(id: string, billId: string, blob: Blob): Promise<boolean> {
+    if (!this.photoReady) return false;
+    try {
+      await this.db!.put('photos', { id, billId, blob, createdAt: Date.now() });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** 加载照片并生成 objectURL（缓存后复用） */
   async loadPhotoURL(id: string): Promise<string | undefined> {
     const cached = this.photoURLs.get(id);
