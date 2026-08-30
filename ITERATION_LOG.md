@@ -4,6 +4,20 @@
 
 ---
 
+## [v1.8.3 - 2026-08-30] - 体积优化：Chart.js 按需注册（懒加载块 204KB → 182KB）
+
+### 📝 更新详情
+- ⚡ **体积 (Size):**
+  - **Chart.js 按需注册**：新增 `src/utils/chartSetup.ts`，只注册实际用到的 控制器（折线/柱状/环形）+ 元素 + 比例尺 + 插件，替代 `chart.js/auto` 的全量注册——图表懒加载块 204KB → 182KB（gzip 71.5 → 63.6KB）；manualChunks 固定 chunk 名为 `chart-*`，SW 预缓存排除规则同步更新
+  - **主包成分分析**（sourcemap 聚合）：主包 96.6KB（gzip 32.2KB）= 应用代码 + react-router + zustand + idb + lucide 图标（源码 34.5KB），无赘肉依赖；react-vendor 164KB 为 React 本体，唯一大刀是换 preact（省 ~30KB gzip）——稳定性风险大于收益，暂不采纳
+- ✅ **验证 (Verified):**
+  - `tsc --noEmit` strict + 构建通过；**生产构建**（vite preview）端到端：插入演示数据后折线/环形/柱状三图全部正常渲染（像素级确认），预缓存清单正确排除 chart-*/supabase-* 大块
+  - 排查记录：开发服务器上曾出现「环形/柱状空白」，定位为 HMR 依赖重优化导致的旧块混跑（生产构建无此问题）；合成 mousemove 无法驱动 Chart.js 悬停动画帧，tooltip 以注册完整性推定正常（register 缺参会在模块加载时整体抛错）
+- 📌 **说明 (Notes):** 首装预缓存 ~385KB（全部功能页面离线可用）；chart/supabase 两大块按需加载不计入
+
+---
+
+
 ## [v1.8.2 - 2026-08-30] - 性能专项三期：空闲预取路由 + 图表冗余重绘防护 + 明细分组标题预计算
 
 ### 📝 更新详情

@@ -25,10 +25,10 @@ const PIE_PALETTE = ['#E4C066', '#7FA6C9', '#8FCB9B', '#D98FA4', '#A08FDC', '#6E
 const OTHER_COLOR = '#8E8E93';
 const OTHER_ID = '__other__';
 
-/** chart.js/auto 只加载一次：折线/环形/柱状三个实例共用 */
-let chartAutoPromise: Promise<typeof import('chart.js/auto').default> | null = null;
+/** chart.js 只加载一次（按需注册版，见 utils/chartSetup）：折线/环形/柱状三个实例共用 */
+let chartAutoPromise: Promise<typeof import('../utils/chartSetup')['Chart']> | null = null;
 function loadChart() {
-  return (chartAutoPromise ??= import('chart.js/auto').then((m) => m.default));
+  return (chartAutoPromise ??= import('../utils/chartSetup').then((m) => m.Chart));
 }
 
 type CatRow = { id: string; name: string; icon: string; cents: number; pct: number; color: string };

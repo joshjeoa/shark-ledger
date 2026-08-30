@@ -51,7 +51,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // 大体量懒加载块移出首装预缓存：访问对应功能后由下方运行时缓存接管离线
-        globIgnores: ['assets/auto-*.js', 'assets/supabase-*.js'],
+        globIgnores: ['assets/chart-*.js', 'assets/supabase-*.js'],
         runtimeCaching: [
           {
             urlPattern: /\.(?:js|css)$/,
@@ -76,6 +76,10 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined;
           // supabase-js 单独成块：仅账号功能用户会下载，且移出 SW 预缓存
           if (id.includes('@supabase')) return 'supabase';
+          // chart.js 单独成块（按需注册版）：仅图表页访问时加载，移出 SW 预缓存
+          if (/[\\/]node_modules[\\/]chart\.js[\\/]/.test(id) || /[\\/]node_modules[\\/]@kurkle[\\/]/.test(id)) {
+            return 'chart';
+          }
           if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|@remix-run)[\\/]/.test(id)) {
             return 'react-vendor';
           }
