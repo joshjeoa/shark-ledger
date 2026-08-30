@@ -27,7 +27,6 @@ const DataPage = lazy(() => import('./pages/settings/DataPage').then((m) => ({ d
 const BackupPage = lazy(() => import('./pages/settings/BackupPage').then((m) => ({ default: m.BackupPage })));
 const AccountPage = lazy(() => import('./pages/settings/AccountPage').then((m) => ({ default: m.AccountPage })));
 const AboutPage = lazy(() => import('./pages/settings/AboutPage').then((m) => ({ default: m.AboutPage })));
-const ProPage = lazy(() => import('./pages/ProPage').then((m) => ({ default: m.ProPage })));
 const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
 
 /** PWA 更新提示：SW 检测到新版本时弹横幅，用户确认后刷新 */
@@ -61,9 +60,7 @@ export default function App() {
     setupSyncLifecycle();
     // 账号同步生命周期（登录事件/网络恢复补跑）按需加载：未配置 Supabase 时不进主包
     void import('./sync/account').then((m) => m.setupAccountLifecycle());
-    // Pro 权益拉取与登录事件订阅（依赖账号模块，同样懒加载）
-    void import('./vip/entitlement').then((m) => m.setupEntitlementLifecycle());
-    // 照片云自动上传：保险库同步成功后防抖执行（内部自行判断 Pro/开关/登录态）
+    // 照片云自动上传：保险库同步成功后防抖执行（登录态下才实际运行）
     window.addEventListener('vault-synced', () => {
       void import('./vip/photoCloud').then((m) => m.schedulePhotoCloudSync());
     });
@@ -151,7 +148,6 @@ export default function App() {
               <Route path="/settings/backup" element={<BackupPage />} />
               <Route path="/settings/account" element={<AccountPage />} />
               <Route path="/settings/about" element={<AboutPage />} />
-              <Route path="/settings/pro" element={<ProPage />} />
               <Route path="/report" element={<ReportPage />} />
               <Route path="*" element={<DetailPage />} />
               </Routes>

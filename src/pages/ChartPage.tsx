@@ -8,7 +8,6 @@ import { toYuan } from '../utils/money';
 import { ledgerBills, sumByType } from '../utils/stats';
 import { CatIcon } from '../utils/iconMap';
 import { EmptyState } from '../components/EmptyState';
-import { ProGateButton } from '../vip/ProGate';
 import { Crown } from 'lucide-react';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import type { Bill, BillType } from '../types';
@@ -466,15 +465,14 @@ export function ChartPage() {
               <option value="expense">支出</option>
               <option value="income">收入</option>
             </select>
-            <ProGateButton
-              feature="年度报告"
-              ariaLabel="年度报告"
+            <button
+              aria-label="年度报告"
               className="absolute right-0 flex items-center gap-1 text-sm text-header-ink px-3 py-1.5 rounded-full bg-header-fill"
-              onProceed={() => navigate('/report')}
+              onClick={() => navigate('/report')}
             >
               <Crown size={15} className="text-primary" />
               年报
-            </ProGateButton>
+            </button>
           </div>
           <div className="grid grid-cols-3 mt-3 rounded-lg overflow-hidden bg-header-fill text-sm text-center">
             {(['week', 'month', 'year'] as Period[]).map((p) => (

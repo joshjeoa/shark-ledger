@@ -14,8 +14,6 @@ import { monthKey } from '../utils/date';
 import { CatIcon } from '../utils/iconMap';
 import { downloadBlob } from '../utils/download';
 import { useUI } from '../store/ui';
-import { usePro } from '../vip/entitlement';
-import { UpgradeSheet } from '../vip/ProGate';
 
 interface YearStats {
   hasData: boolean;
@@ -111,9 +109,7 @@ export function ReportPage() {
   const currentLedgerId = useData((s) => s.currentLedgerId);
   const hide = useSettings((s) => s.hideAmount);
   const toast = useUI((s) => s.toast);
-  const pro = usePro();
   const [yearOffset, setYearOffset] = useState(0);
-  const [upsellOpen, setUpsellOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const nowYear = new Date().getFullYear();
@@ -152,24 +148,6 @@ export function ReportPage() {
       setSaving(false);
     }
   };
-
-  // 直接访问路由的非 Pro 用户：给出开通引导（客户端门槛）
-  if (!pro) {
-    return (
-      <SettingsShell title="年度报告">
-        <div className="px-3 pt-3">
-          <div className="rounded-2xl bg-card p-6 text-center">
-            <p className="text-sm font-medium mb-2">年度报告是 Pro 功能</p>
-            <p className="text-xs text-ink-3 mb-4">请在「设置 → 鲨鱼 Pro」中开通后使用</p>
-            <button className="h-10 px-6 rounded-full bg-primary text-on-primary text-sm font-medium" onClick={() => setUpsellOpen(true)}>
-              了解鲨鱼 Pro
-            </button>
-          </div>
-        </div>
-        <UpgradeSheet open={upsellOpen} onClose={() => setUpsellOpen(false)} feature="年度报告" />
-      </SettingsShell>
-    );
-  }
 
   const mom = stats.prevExpense > 0 ? Math.round(((stats.expense - stats.prevExpense) / stats.prevExpense) * 100) : null;
   const maxMonth = Math.max(...stats.months.map((m) => Math.max(m.income, m.expense)), 1);

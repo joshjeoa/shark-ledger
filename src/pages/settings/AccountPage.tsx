@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { CloudUpload, Crown, Download, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
+import { CloudUpload, Download, Eye, EyeOff, Images, KeyRound, Loader2, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react';
 import { SettingsShell, Toggle } from './SettingsShell';
 import { useUI } from '../../store/ui';
 import { useSettings } from '../../store/settings';
-import { usePro } from '../../vip/entitlement';
-import { UpgradeSheet } from '../../vip/ProGate';
 import type { PhotoCloudStats } from '../../vip/photoCloud';
 import {
   deleteVault,
@@ -328,18 +326,16 @@ export function AccountPage() {
   );
 }
 
-/** 照片云同步（Pro）：本地 IndexedDB ↔ Supabase Storage（私有桶，按用户隔离）。
+/** 照片云同步：本地 IndexedDB ↔ Supabase Storage（私有桶，按用户隔离）。
  * 照片为明文原图（已压缩），依赖存储桶 RLS 只允许本人读写；口令加密不适用二进制通道。 */
 function PhotoCloudCard() {
   const toast = useUI((s) => s.toast);
-  const pro = usePro();
   const photoCloudAuto = useSettings((s) => s.photoCloudAuto);
   const setSettings = useSettings((s) => s.set);
   const [stats, setStats] = useState<PhotoCloudStats | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<'upload' | 'download' | null>(null);
   const [progress, setProgress] = useState('');
-  const [upsellOpen, setUpsellOpen] = useState(false);
 
   const reload = () => {
     void import('../../vip/photoCloud').then(async (m) => {
@@ -379,37 +375,27 @@ function PhotoCloudCard() {
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
       <h2 className="text-sm font-medium flex items-center gap-1.5">
-        <Crown size={16} className="text-primary" /> 照片云同步
-        <span className="text-[10px] text-on-primary bg-primary rounded-full px-1.5 py-0.5 font-medium">Pro</span>
+        <Images size={16} className="text-ink-2" /> 照片云同步
       </h2>
 
-      {!pro ? (
-        <>
-          <p className="text-xs text-ink-3 leading-relaxed">凭证照片跨设备云备份：换手机登录同一账号即可找回全部凭证照。</p>
-          <button className="w-full h-10 rounded-xl bg-fill text-sm text-ink font-medium flex items-center justify-center gap-1.5" onClick={() => setUpsellOpen(true)}>
-            <Crown size={14} className="text-primary" /> 开通后使用
-          </button>
-          <UpgradeSheet open={upsellOpen} onClose={() => setUpsellOpen(false)} feature="照片云同步" />
-        </>
-      ) : (
-        <>
-          <p className="text-xs text-ink-3 leading-relaxed">
-            照片上传到你的私有存储空间（仅本人可读），本地数据不受影响。上传为明文原图（已压缩），不含账单金额。
-          </p>
-          {loadErr ? (
-            <p className="text-xs text-danger">读取失败：{loadErr}</p>
-          ) : stats ? (
-            <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="bg-fill rounded-xl p-2.5">
-                <p className="text-xs text-ink-3 mb-0.5">本机</p>
-                <b className="tabular-nums">{stats.localCount}</b>
-              </div>
-              <div className="bg-fill rounded-xl p-2.5">
-                <p className="text-xs text-ink-3 mb-0.5">云端</p>
-                <b className="tabular-nums">{stats.cloudCount}</b>
-              </div>
-              <div className="bg-fill rounded-xl p-2.5">
-                <p className="text-xs text-ink-3 mb-0.5">待上传</p>
+      <div>
+        <p className="text-xs text-ink-3 leading-relaxed">
+          照片上传到你的私有存储空间（仅本人可读），本地数据不受影响。上传为明文原图（已压缩），不含账单金额。
+        </p>
+        {loadErr ? (
+          <p className="text-xs text-danger">读取失败：{loadErr}</p>
+        ) : stats ? (
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="bg-fill rounded-xl p-2.5">
+              <p className="text-xs text-ink-3 mb-0.5">本机</p>
+              <b className="tabular-nums">{stats.localCount}</b>
+            </div>
+            <div className="bg-fill rounded-xl p-2.5">
+              <p className="text-xs text-ink-3 mb-0.5">云端</p>
+              <b className="tabular-nums">{stats.cloudCount}</b>
+            </div>
+            <div className="bg-fill rounded-xl p-2.5">
+              <p className="text-xs text-ink-3 mb-0.5">待上传</p>
                 <b className="tabular-nums">{stats.pendingCount}</b>
               </div>
             </div>
@@ -438,8 +424,7 @@ function PhotoCloudCard() {
               }}
             />
           </div>
-        </>
-      )}
+      </div>
     </div>
   );
 }
