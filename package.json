@@ -1,7 +1,7 @@
 {
   "name": "shark-ledger",
   "private": true,
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "轻量、无广告、可离线、可加密云备份的个人记账 PWA",
   "type": "module",
   "license": "MIT",

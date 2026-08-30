@@ -5,7 +5,14 @@ import { useData } from '../../store/data';
 import { useUI } from '../../store/ui';
 import { repo } from '../../db/repo';
 import { seedDemoBills } from '../../db/seed';
-import { billsToCSV, parseCSVToBills, type CSVImportResult } from '../../utils/csv';
+import {
+  billsToCSV,
+  parseCSVToBills,
+  parseThirdPartyBills,
+  decodeBillFile,
+  type CSVImportResult,
+  type BillSource,
+} from '../../utils/csv';
 import { downloadFile } from '../../utils/download';
 import { validateDump } from '../../utils/merge';
 import { dayKey, monthKey } from '../../utils/date';
@@ -28,7 +35,7 @@ export function DataPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const [importData, setImportData] = useState<FullDump['data'] | null>(null);
-  const [csvPreview, setCsvPreview] = useState<CSVImportResult | null>(null);
+  const [csvPreview, setCsvPreview] = useState<(CSVImportResult & { source?: BillSource }) | null>(null);
 
   const active = bills.filter((b) => !b.deletedAt);
   const deleted = bills.filter((b) => b.deletedAt).sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
@@ -99,10 +106,18 @@ export function DataPage() {
   const onPickCSV = async (f: File | null) => {
     if (!f) return;
     try {
-      const text = await f.text();
-      const result = parseCSVToBills(text, { cats: categories, accounts, ledgerId: currentLedgerId });
+      // 先按 UTF-8/GBK 自动探测解码（支付宝导出常为 GBK），再识别账单来源
+      const text = await decodeBillFile(f);
+      const third = parseThirdPartyBills(text, { cats: categories, accounts, ledgerId: currentLedgerId });
+      const result: CSVImportResult & { source?: BillSource } =
+        third ?? parseCSVToBills(text, { cats: categories, accounts, ledgerId: currentLedgerId });
       if (result.bills.length === 0) {
-        toast('没有解析出有效账单，请检查格式（日期,类型,分类,金额,账户,标签,备注）', 'err');
+        toast(
+          third
+            ? '未解析出有效账单，请确认导出的是完整微信/支付宝账单（含表头）'
+            : '没有解析出有效账单，请检查格式（日期,类型,分类,金额,账户,标签,备注）',
+          'err',
+        );
         return;
       }
       setCsvPreview(result);
@@ -132,7 +147,7 @@ export function DataPage() {
           <Btn icon={<Download size={18} />} label="导出全量 JSON 备份" onClick={() => void exportJSON()} />
           <Btn icon={<Upload size={18} />} label="导入 JSON 备份" onClick={() => fileRef.current?.click()} />
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)} />
-          <Btn icon={<FileUp size={18} />} label="导入 CSV（支持本应用导出的格式）" onClick={() => csvRef.current?.click()} />
+          <Btn icon={<FileUp size={18} />} label="导入 CSV（本应用 / 微信 / 支付宝账单）" onClick={() => csvRef.current?.click()} />
           <input ref={csvRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => void onPickCSV(e.target.files?.[0] ?? null)} />
           <Btn icon={<Sparkles size={18} />} label="插入演示数据（最近 90 天仿真流水）" onClick={() => void insertDemo()} />
         </div>
@@ -175,14 +190,19 @@ export function DataPage() {
       <Sheet open={!!csvPreview} onClose={() => setCsvPreview(null)} title="导入 CSV">
         <div className="px-4 pb-6 space-y-3">
           <p className="text-xs text-ink-3">
-            解析出 <b className="text-ink">{csvPreview?.bills.length ?? 0}</b> 笔有效账单
+            {csvPreview?.source === 'wechat' ? '已识别微信支付账单' : csvPreview?.source === 'alipay' ? '已识别支付宝账单' : '本应用导出格式'}，解析出{' '}
+            <b className="text-ink">{csvPreview?.bills.length ?? 0}</b> 笔有效账单
             {csvPreview && csvPreview.skipped > 0 && (
               <>
-                ，跳过 <b className="text-danger">{csvPreview.skipped}</b> 行无效数据
+                ，跳过 <b className="text-danger">{csvPreview.skipped}</b> 行（含转账等不计收支交易）
               </>
             )}
           </p>
-          <p className="text-xs text-ink-3">分类/账户按名称匹配，未识别的分类自动归入「日用/其他」，不会覆盖现有数据</p>
+          <p className="text-xs text-ink-3">
+            {csvPreview?.source && csvPreview.source !== 'own'
+              ? '支出按交易内容自动分类，未识别的归入「日用」，收入归入「其他」；不会覆盖现有数据'
+              : '分类/账户按名称匹配，未识别的分类自动归入「日用/其他」，不会覆盖现有数据'}
+          </p>
           <button className="w-full h-11 rounded-xl bg-primary text-on-primary text-sm font-medium" onClick={() => void doImportCSV()}>
             合并导入
           </button>
