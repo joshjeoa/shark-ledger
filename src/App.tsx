@@ -65,6 +65,14 @@ export default function App() {
       void import('./vip/photoCloud').then((m) => m.schedulePhotoCloudSync());
     });
     refreshSyncUI();
+    // 空闲预取 TabBar 三个懒加载页面的 chunk：冷启动后首次切换不再闪骨架屏
+    // （每个 chunk 仅几 KB；图表库 208KB 仍保持按需加载，不影响首装体积策略）
+    const idle = typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback.bind(window) : (cb: () => void) => window.setTimeout(cb, 2200);
+    idle(() => {
+      void import('./pages/ChartPage');
+      void import('./pages/DiscoverPage');
+      void import('./pages/MinePage');
+    });
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();

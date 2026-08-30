@@ -83,7 +83,7 @@ export function DetailPage() {
     for (const arr of map.values()) {
       arr.sort((a, b) => b.createdAt - a.createdAt || b.occurredAt - a.occurredAt);
     }
-    // 日期小计也在此一并算好：此前在渲染体里对每组做两遍 filter+reduce，搜索每敲一个字都重算
+    // 日期小计与标题文案在此一并算好：渲染体不再对每组做日期解析
     return Array.from(map.entries())
       .sort((a, b) => (a[0] > b[0] ? -1 : 1))
       .map(([day, items]) => {
@@ -93,7 +93,8 @@ export function DetailPage() {
           if (b.type === 'income') dayIncome += b.amountCents;
           else dayExpense += b.amountCents;
         }
-        return { day, items, dayIncome, dayExpense };
+        const t = new Date(`${day}T12:00:00`).getTime();
+        return { day, items, dayIncome, dayExpense, dayLabel: `${day.slice(5).replace('-', '月')}日 ${weekdayLabel(t)}` };
       });
   }, [filtered]);
 
@@ -211,14 +212,11 @@ export function DetailPage() {
         {groups.length === 0 ? (
           <EmptyState text={query ? '没有找到相关账单' : '开始记第一笔吧'} actionLabel={query ? undefined : '记一笔'} onAction={() => openEntry(null)} />
         ) : (
-          groups.map(({ day, items, dayIncome, dayExpense }) => {
-            const t = new Date(`${day}T12:00:00`).getTime();
+          groups.map(({ day, items, dayIncome, dayExpense, dayLabel }) => {
             return (
               <section key={day}>
                 <div className="flex justify-between px-4 py-2 text-xs text-ink-3">
-                  <span>
-                    {day.slice(5).replace('-', '月')}日 {weekdayLabel(t)}
-                  </span>
+                  <span>{dayLabel}</span>
                   <span>
                     {dayIncome > 0 && `收入：${show(dayIncome)}`}
                     {dayIncome > 0 && dayExpense > 0 && '  '}

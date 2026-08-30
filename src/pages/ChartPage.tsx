@@ -191,6 +191,11 @@ export function ChartPage() {
   const chartRef = useRef<Chart<'line'> | null>(null);
   const doughnutRef = useRef<Chart<'doughnut'> | null>(null);
   const barRef = useRef<Chart<'bar'> | null>(null);
+  // 上次绘制的内容签名：model 引用变化但数据/主题/打码状态未变时跳过 chart.update()，
+  // 省掉一次整幅画布重绘（如周↔月切换时柱状图数据完全不变）
+  const lineSig = useRef('');
+  const doughnutSig = useRef('');
+  const barSig = useRef('');
   // 图表 ↔ 排行榜联动：点击环形图分片高亮排行榜对应分类
   const [focusCat, setFocusCat] = useState<string | null>(null);
   // 时间基线固定为状态：作为 useMemo 依赖保证稳定，避免每次渲染重算并重建图表
@@ -333,8 +338,11 @@ export function ChartPage() {
 
   // 折线趋势图：数据/主题变化时 update() 复用实例（懒加载后 chart.js/auto 常驻）
   useEffect(() => {
+    const sig = JSON.stringify([model.labels, model.buckets, model.avg, hide, theme]);
+    if (lineSig.current === sig) return;
     const chart = chartRef.current;
     if (chart) {
+      lineSig.current = sig;
       chart.data.labels = model.labels;
       chart.data.datasets = buildDatasets(chart, model);
       chart.options = buildOptions(model, hide);
@@ -344,6 +352,7 @@ export function ChartPage() {
     let cancelled = false;
     void loadChart().then((Chart) => {
       if (cancelled || !canvasRef.current) return;
+      lineSig.current = sig;
       const c = new Chart(canvasRef.current, {
         type: 'line',
         data: { labels: model.labels, datasets: [] },
@@ -361,13 +370,17 @@ export function ChartPage() {
   // 构成环形图
   useEffect(() => {
     if (model.comp.length === 0) {
+      doughnutSig.current = '';
       doughnutRef.current?.destroy();
       doughnutRef.current = null;
       return;
     }
+    const sig = JSON.stringify([model.comp, model.total, hide, theme, metric]);
+    if (doughnutSig.current === sig) return;
     let cancelled = false;
     void loadChart().then((Chart) => {
       if (cancelled) return;
+      doughnutSig.current = sig;
       const data = {
         labels: model.comp.map((r) => r.name),
         datasets: [
@@ -399,13 +412,18 @@ export function ChartPage() {
   // 近 6 个月收支对比柱状图
   useEffect(() => {
     if (model.sixTotal === 0) {
+      barSig.current = '';
       barRef.current?.destroy();
       barRef.current = null;
       return;
     }
+    // 六个月数据与周期/口径选择无关：周期切换时签名不变即跳过重绘
+    const sig = JSON.stringify([model.sixLabels, model.sixIncome, model.sixExpense, hide, theme]);
+    if (barSig.current === sig) return;
     let cancelled = false;
     void loadChart().then((Chart) => {
       if (cancelled) return;
+      barSig.current = sig;
       const data = {
         labels: model.sixLabels,
         datasets: [
