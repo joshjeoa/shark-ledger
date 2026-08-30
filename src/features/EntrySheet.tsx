@@ -128,7 +128,20 @@ export function EntrySheet() {
     setCategoryId(lastCategory[t] ?? '');
   };
 
+  // 防双击重复入账：保存是异步落库，第二击必须等到本次流程结束（成功关面板/失败复位）
+  const savingRef = useRef(false);
+
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    try {
+      await doSave();
+    } finally {
+      savingRef.current = false;
+    }
+  };
+
+  const doSave = async () => {
     const cents = parseYuanToCents(amount);
     if (cents === null) {
       toast('请输入正确金额', 'err');
@@ -249,15 +262,15 @@ export function EntrySheet() {
           }}
         />
 
-        {/* 金额显示 + 键盘 */}
-        <div className="flex items-end justify-between px-1 h-12">
+        {/* 金额显示 + 键盘。与键盘留出间距：贴死时瞄准键盘顶行容易擦到「记一笔」造成误存 */}
+        <div className="flex items-end justify-between px-1 h-12 mb-2.5">
           <span className="text-2xl font-semibold text-ink">
             <span className="text-base mr-1">¥</span>
             {amount || '0'}
           </span>
           <button
             disabled={!amount}
-            className={`h-10 px-8 rounded-full font-medium ${amount ? 'bg-primary text-on-primary' : 'bg-fill text-ink-3'}`}
+            className={`h-11 px-8 rounded-full font-medium ${amount ? 'bg-primary text-on-primary' : 'bg-fill text-ink-3'}`}
             onClick={() => void save()}
           >
             {editing ? '保存' : '记一笔'}
